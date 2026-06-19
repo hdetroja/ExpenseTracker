@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "ExpenseTracker",
+    "slug": "expensetracker",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "expensetracker",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.hdetroja.expensetracker"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.hdetroja.expensetracker",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow ExpenseTracker to access your camera to scan receipts."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow ExpenseTracker to access your photos to upload receipts."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "191e1b04-b41b-43ef-b29f-b39528a8522f"
+      }
+    },
+    "owner": "hdetroja"
+  }
+}
