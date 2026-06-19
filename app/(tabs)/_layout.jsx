@@ -61,6 +61,7 @@ export default function TabsLayout() {
       {/* Hide these from tab bar */}
       <Tabs.Screen name="profile" options={{ href: null }} />
       <Tabs.Screen name="index" options={{ href: null }} />
+      <Tabs.Screen name="shopping" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -21,6 +21,7 @@ export default function Add() {
   }, []);
 
   async function fetchCategories() {
+    const { data: { user } } = await supabase.auth.getUser();
     const { data, error } = await supabase
       .from('categories')
       .select('*')
@@ -59,12 +60,6 @@ export default function Add() {
     setLoading(true);
 
     const { data: { user } } = await supabase.auth.getUser();
-    
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('family_id')
-      .eq('id', user.id)
-      .single();
 
     const { error } = await supabase.from('expenses').insert({
       amount: parseFloat(amount),
@@ -72,8 +67,7 @@ export default function Add() {
       category_id: selectedCategory,
       is_shared: isShared,
       expense_date: date,
-      owner_id: user?.id,
-      family_id: profile?.family_id,
+      owner_id: user.id,
     });
 
     if (error) {

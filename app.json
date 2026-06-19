@@ -6,13 +6,21 @@
     "orientation": "portrait",
     "scheme": "expensetracker",
     "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#4f46e5"
+    },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.hdetroja.expensetracker"
+      "bundleIdentifier": "com.hdetroja.expensetracker",
+      "icon": "./assets/icon.png"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#4f46e5"
       },
       "package": "com.hdetroja.expensetracker",
       "permissions": [

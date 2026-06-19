@@ -9,6 +9,8 @@ export default function Home() {
   const [categories, setCategories] = useState({});
   const [refreshing, setRefreshing] = useState(false);
   const [profiles, setProfiles] = useState({});
+  const [currentUser, setCurrentUser] = useState(null);
+  const [shoppingLists, setShoppingLists] = useState([]);
 
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -19,7 +21,14 @@ export default function Home() {
     }, [])
   );
 
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => setCurrentUser(user));
+  }, []);
+
   async function fetchData() {
+    const { data: { user } } = await supabase.auth.getUser();
+    setCurrentUser(user);
+
     const { data: cats } = await supabase.from('categories').select('*');
     if (cats) {
       const catMap = {};
@@ -38,8 +47,24 @@ export default function Home() {
       .from('expenses')
       .select('*')
       .order('expense_date', { ascending: false });
-
     if (exp) setExpenses(exp);
+
+    // Fetch shopping lists
+    if (user) {
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('family_id')
+        .eq('id', user.id)
+        .single();
+
+      const { data: lists } = await supabase
+        .from('shopping_lists')
+        .select('*, shopping_items(id, is_checked)')
+        .or(`owner_id.eq.${user.id}${prof?.family_id ? `,and(is_shared.eq.true,family_id.eq.${prof.family_id})` : ''}`)
+        .order('created_at', { ascending: false });
+
+      if (lists) setShoppingLists(lists);
+    }
   }
 
   async function onRefresh() {
@@ -48,14 +73,9 @@ export default function Home() {
     setRefreshing(false);
   }
 
-  const [currentUser, setCurrentUser] = useState(null);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setCurrentUser(user));
-  }, []);
-
-  const totalPersonal = expenses.filter(e => !e.is_shared && e.owner_id === currentUser?.id).reduce((sum, e) => sum + parseFloat(e.amount), 0);
-  const totalShared = expenses.filter(e => e.is_shared).reduce((sum, e) => sum + parseFloat(e.amount), 0);
+  const monthExpenses = expenses.filter(e => e.expense_date?.startsWith(currentMonth));
+  const totalPersonal = monthExpenses.filter(e => !e.is_shared && e.owner_id === currentUser?.id).reduce((sum, e) => sum + parseFloat(e.amount), 0);
+  const totalShared = monthExpenses.filter(e => e.is_shared).reduce((sum, e) => sum + parseFloat(e.amount), 0);
   const totalMonth = totalPersonal + totalShared;
   const recentExpenses = expenses.slice(0, 5);
 
@@ -67,7 +87,7 @@ export default function Home() {
       <View style={styles.header}>
         <Text style={styles.title}>💰 ExpenseTracker</Text>
         <Text style={styles.month}>
-          {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}
+          {now.toLocaleString('default', { month: 'long', year: 'numeric' })}
         </Text>
       </View>
 
@@ -89,10 +109,53 @@ export default function Home() {
         </View>
       </View>
 
-      {/* Add Button */}
-      <TouchableOpacity style={styles.addButton} onPress={() => router.push('/(tabs)/add')}>
-        <Text style={styles.addButtonText}>➕ Add Expense</Text>
-      </TouchableOpacity>
+      {/* Action Buttons */}
+      <View style={styles.actionRow}>
+        <TouchableOpacity style={styles.addButton} onPress={() => router.push('/(tabs)/add')}>
+          <Text style={styles.addButtonText}>➕ Add Expense</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.shoppingButton} onPress={() => router.push('/(tabs)/shopping')}>
+          <Text style={styles.shoppingButtonText}>🛒 Shopping</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Shopping Lists Preview */}
+      {shoppingLists.length > 0 && (
+        <>
+          <Text style={styles.sectionTitle}>Shopping Lists</Text>
+          {shoppingLists.slice(0, 3).map(list => {
+            const total = list.shopping_items?.length || 0;
+            const checked = list.shopping_items?.filter(i => i.is_checked).length || 0;
+            return (
+              <TouchableOpacity
+                key={list.id}
+                style={styles.shoppingCard}
+                onPress={() => router.push('/(tabs)/shopping')}
+              >
+                <Text style={styles.shoppingCardIcon}>
+                  {list.is_shared ? '👨‍👩‍👧' : '👤'}
+                </Text>
+                <View style={styles.shoppingCardInfo}>
+                  <Text style={styles.shoppingCardName}>{list.name}</Text>
+                  <Text style={styles.shoppingCardMeta}>
+                    {checked}/{total} items done
+                  </Text>
+                </View>
+                {total > 0 && (
+                  <View style={styles.shoppingProgress}>
+                    <View style={styles.shoppingProgressTrack}>
+                      <View style={[styles.shoppingProgressFill, {
+                        width: `${total > 0 ? (checked / total) * 100 : 0}%`
+                      }]} />
+                    </View>
+                  </View>
+                )}
+                <Text style={styles.shoppingArrow}>›</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </>
+      )}
 
       {/* Recent Transactions */}
       <Text style={styles.sectionTitle}>Recent Transactions</Text>
@@ -146,12 +209,30 @@ const styles = StyleSheet.create({
   smallCard: { flex: 1, borderRadius: 16, padding: 16 },
   smallLabel: { fontSize: 12, color: '#666', marginBottom: 4 },
   smallAmount: { fontSize: 22, fontWeight: 'bold', color: '#1a1a2e' },
+  actionRow: { flexDirection: 'row', marginHorizontal: 16, gap: 12, marginTop: 16 },
   addButton: {
-    backgroundColor: '#4f46e5', margin: 16, borderRadius: 12,
+    flex: 2, backgroundColor: '#4f46e5', borderRadius: 12,
     padding: 16, alignItems: 'center'
   },
-  addButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  addButtonText: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
+  shoppingButton: {
+    flex: 1, backgroundColor: '#fff', borderRadius: 12,
+    padding: 16, alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0'
+  },
+  shoppingButtonText: { color: '#1a1a2e', fontSize: 15, fontWeight: 'bold' },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', margin: 16, color: '#1a1a2e' },
+  shoppingCard: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
+    marginHorizontal: 16, marginBottom: 8, borderRadius: 12, padding: 12, gap: 10
+  },
+  shoppingCardIcon: { fontSize: 22 },
+  shoppingCardInfo: { flex: 1 },
+  shoppingCardName: { fontSize: 14, fontWeight: '600', color: '#1a1a2e' },
+  shoppingCardMeta: { fontSize: 12, color: '#999', marginTop: 2 },
+  shoppingProgress: { width: 60 },
+  shoppingProgressTrack: { height: 6, backgroundColor: '#f0f4ff', borderRadius: 3 },
+  shoppingProgressFill: { height: 6, backgroundColor: '#4f46e5', borderRadius: 3 },
+  shoppingArrow: { fontSize: 20, color: '#ccc' },
   emptyState: { alignItems: 'center', padding: 40 },
   emptyText: { fontSize: 16, color: '#666', marginBottom: 8 },
   emptySubtext: { fontSize: 14, color: '#999' },

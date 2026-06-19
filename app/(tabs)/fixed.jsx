@@ -51,6 +51,8 @@ export default function Fixed() {
       return;
     }
 
+    const { data: { user } } = await supabase.auth.getUser();
+
     const { error } = await supabase.from('fixed_expenses').insert({
       description: description.trim(),
       amount: parseFloat(amount),
@@ -58,6 +60,7 @@ export default function Fixed() {
       day_of_month: parseInt(dayOfMonth) || 1,
       is_shared: isShared,
       is_active: true,
+      owner_id: user.id,
     });
 
     if (error) {
