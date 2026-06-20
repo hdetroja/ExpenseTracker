@@ -10,6 +10,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   function nameToEmail(name) {
     const cleaned = name.trim().toLowerCase().replace(/\s+/g, '.');
@@ -66,13 +67,24 @@ export default function Login() {
           autoCapitalize="words"
         />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Password (min 6 characters)"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+        <View style={styles.passwordRow}>
+          <TextInput
+            style={styles.passwordInput}
+            placeholder="Password (min 6 characters)"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+            autoCapitalize="none"
+            autoCorrect={false}
+            textContentType="oneTimeCode"
+          />
+          <TouchableOpacity
+            style={styles.eyeBtn}
+            onPress={() => setShowPassword(!showPassword)}
+          >
+            <Text style={styles.eyeText}>{showPassword ? '🙈' : '👁️'}</Text>
+          </TouchableOpacity>
+        </View>
 
         {isSignUp && (
           <Text style={styles.hint}>
@@ -119,6 +131,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', borderRadius: 12, padding: 16,
     marginBottom: 16, fontSize: 16, borderWidth: 1, borderColor: '#e0e0e0'
   },
+  passwordRow: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
+    borderRadius: 12, marginBottom: 16, borderWidth: 1, borderColor: '#e0e0e0'
+  },
+  passwordInput: { flex: 1, padding: 16, fontSize: 16 },
+  eyeBtn: { paddingHorizontal: 16 },
+  eyeText: { fontSize: 18 },
   hint: {
     fontSize: 13, color: '#666', backgroundColor: '#ede9fe',
     padding: 12, borderRadius: 10, marginBottom: 16, lineHeight: 18

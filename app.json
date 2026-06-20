@@ -25,6 +25,8 @@
       "package": "com.hdetroja.expensetracker",
       "permissions": [
         "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
       ]
     },
@@ -53,6 +55,12 @@
         "projectId": "191e1b04-b41b-43ef-b29f-b39528a8522f"
       }
     },
-    "owner": "hdetroja"
+    "owner": "hdetroja",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/191e1b04-b41b-43ef-b29f-b39528a8522f"
+    }
   }
 }

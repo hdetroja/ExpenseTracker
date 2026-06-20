@@ -21,6 +21,7 @@ export default function Settings() {
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
   const [selectedIcon, setSelectedIcon] = useState(ICONS[0]);
   const [categoriesExpanded, setCategoriesExpanded] = useState(false);
+  const [userId, setUserId] = useState(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -29,6 +30,8 @@ export default function Settings() {
   );
 
   async function fetchCategories() {
+    const { data: { user } } = await supabase.auth.getUser();
+    setUserId(user?.id);
     const { data } = await supabase.from('categories').select('*').order('name');
     if (data) setCategories(data);
   }
@@ -44,11 +47,13 @@ export default function Settings() {
       Alert.alert('Error', 'Please enter a category name');
       return;
     }
+    const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.from('categories').insert({
       name: newCatName.trim(),
       icon: selectedIcon,
       color: selectedColor,
       is_default: false,
+      owner_id: user.id,
     });
     if (error) {
       Alert.alert('Error', error.message);
@@ -64,14 +69,33 @@ export default function Settings() {
   async function deleteCategory(id, name) {
     Alert.alert(
       'Delete Category',
-      `Are you sure you want to delete "${name}"?`,
+      `Are you sure you want to delete "${name}"? Any expenses using this category will be moved to "Others".`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete', style: 'destructive',
           onPress: async () => {
+            const othersCategory = categories.find(c => c.name === 'Others' && c.is_default);
+            console.log('Others category:', othersCategory);
+
+            if (othersCategory && othersCategory.id !== id) {
+              const r1 = await supabase
+                .from('expenses')
+                .update({ category_id: othersCategory.id })
+                .eq('category_id', id);
+              console.log('Expenses reassign result:', r1.error);
+
+              const r2 = await supabase
+                .from('fixed_expenses')
+                .update({ category_id: othersCategory.id })
+                .eq('category_id', id);
+              console.log('Fixed expenses reassign result:', r2.error);
+            }
+
             const { error } = await supabase.from('categories').delete().eq('id', id);
-            if (!error) fetchCategories();
+            console.log('Category delete error:', error);
+            if (error) Alert.alert('Error', error.message);
+            else fetchCategories();
           }
         }
       ]
@@ -123,10 +147,17 @@ export default function Settings() {
                 <View style={[styles.iconCircle, { backgroundColor: cat.color + '33' }]}>
                   <Text style={{ fontSize: 20 }}>{cat.icon}</Text>
                 </View>
-                <Text style={styles.catName}>{cat.name}</Text>
-                <TouchableOpacity onPress={() => deleteCategory(cat.id, cat.name)}>
-                  <Text style={styles.deleteBtn}>🗑️</Text>
-                </TouchableOpacity>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={styles.catName}>{cat.name}</Text>
+                  <Text style={styles.catBadge}>
+                    {cat.is_default ? 'Default' : cat.owner_id === userId ? 'Your category' : 'Other'}
+                  </Text>
+                </View>
+                {(cat.is_default || cat.owner_id === userId) && (
+                  <TouchableOpacity onPress={() => deleteCategory(cat.id, cat.name)}>
+                    <Text style={styles.deleteBtn}>🗑️</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ))}
           </View>
@@ -233,7 +264,8 @@ const styles = StyleSheet.create({
   addBtnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
   categoryRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#f0f4ff' },
   iconCircle: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  catName: { flex: 1, fontSize: 14, color: '#1a1a2e', marginLeft: 12 },
+  catName: { fontSize: 14, color: '#1a1a2e' },
+  catBadge: { fontSize: 11, color: '#999', marginTop: 2 },
   deleteBtn: { fontSize: 18 },
   logoutBtn: {
     backgroundColor: '#fff', marginHorizontal: 16, borderRadius: 16,

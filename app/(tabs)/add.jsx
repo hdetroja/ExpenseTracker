@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { TOP_MARGIN } from '../../lib/constants';
 
 export default function Add() {
@@ -16,35 +16,18 @@ export default function Add() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchCategories();
+    }, [])
+  );
 
   async function fetchCategories() {
-    const { data: { user } } = await supabase.auth.getUser();
     const { data, error } = await supabase
       .from('categories')
       .select('*')
       .order('name');
     if (data) setCategories(data);
-  }
-
-  function handleReceiptScanned(parsed) {
-    if (parsed.amount) setAmount(String(parsed.amount));
-    if (parsed.description) setDescription(parsed.description);
-    if (parsed.date) setDate(parsed.date);
-
-    // Auto-select category by name
-    if (parsed.category) {
-      const match = categories.find(c =>
-        c.name.toLowerCase().includes(parsed.category.toLowerCase()) ||
-        parsed.category.toLowerCase().includes(c.name.toLowerCase())
-      );
-      if (match) setSelectedCategory(match.id);
-    }
-
-    setShowScanner(false);
-    Alert.alert('Receipt Scanned!', `Amount: $${parsed.amount}\nStore: ${parsed.description}\nCategory: ${parsed.category}`);
   }
 
   async function handleSave() {
