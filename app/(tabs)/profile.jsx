@@ -145,9 +145,7 @@ export default function Profile() {
     setLoading(true);
 
     const { data: fam, error } = await supabase
-      .from('families')
-      .select('*')
-      .eq('invite_code', inviteCode.trim().toLowerCase())
+      .rpc('find_family_by_invite_code', { code: inviteCode.trim() })
       .single();
 
     if (error || !fam) {
