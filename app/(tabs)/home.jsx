@@ -11,6 +11,7 @@ export default function Home() {
   const [profiles, setProfiles] = useState({});
   const [currentUser, setCurrentUser] = useState(null);
   const [shoppingLists, setShoppingLists] = useState([]);
+  const [familyMembers, setFamilyMembers] = useState([]);
 
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -49,13 +50,23 @@ export default function Home() {
       .order('expense_date', { ascending: false });
     if (exp) setExpenses(exp);
 
-    // Fetch shopping lists
+    // Fetch family members + shopping lists
     if (user) {
       const { data: prof } = await supabase
         .from('profiles')
         .select('family_id')
         .eq('id', user.id)
         .single();
+
+      if (prof?.family_id) {
+        const { data: members } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('family_id', prof.family_id);
+        if (members) setFamilyMembers(members);
+      } else {
+        setFamilyMembers([]);
+      }
 
       const { data: lists } = await supabase
         .from('shopping_lists')
@@ -74,9 +85,26 @@ export default function Home() {
   }
 
   const monthExpenses = expenses.filter(e => e.expense_date?.startsWith(currentMonth));
-  const totalPersonal = monthExpenses.filter(e => !e.is_shared && e.owner_id === currentUser?.id).reduce((sum, e) => sum + parseFloat(e.amount), 0);
+
+  // Grand total = everyone's personal + shared (visible expenses are already filtered by RLS)
+  const totalMonth = monthExpenses.reduce((sum, e) => sum + parseFloat(e.amount), 0);
+
   const totalShared = monthExpenses.filter(e => e.is_shared).reduce((sum, e) => sum + parseFloat(e.amount), 0);
-  const totalMonth = totalPersonal + totalShared;
+
+  // Per-person personal totals — works for any number of family members
+  const personalTotalsByUser = {};
+  monthExpenses.filter(e => !e.is_shared).forEach(e => {
+    if (!personalTotalsByUser[e.owner_id]) personalTotalsByUser[e.owner_id] = 0;
+    personalTotalsByUser[e.owner_id] += parseFloat(e.amount);
+  });
+
+  const myPersonalTotal = personalTotalsByUser[currentUser?.id] || 0;
+
+  // Other family members with personal expenses this month
+  const otherMembersWithExpenses = familyMembers
+    .filter(m => m.id !== currentUser?.id && personalTotalsByUser[m.id] > 0)
+    .map(m => ({ ...m, total: personalTotalsByUser[m.id] }));
+
   const recentExpenses = expenses.slice(0, 5);
 
   return (
@@ -91,22 +119,30 @@ export default function Home() {
         </Text>
       </View>
 
-      {/* Total Card */}
+      {/* Total Card — Grand total of everyone */}
       <View style={styles.totalCard}>
-        <Text style={styles.totalLabel}>Total This Month</Text>
+        <Text style={styles.totalLabel}>
+          {familyMembers.length > 1 ? "Family Total This Month" : "Total This Month"}
+        </Text>
         <Text style={styles.totalAmount}>${totalMonth.toFixed(2)}</Text>
       </View>
 
-      {/* Personal vs Shared */}
-      <View style={styles.row}>
+      {/* Breakdown cards — dynamic per person */}
+      <View style={styles.breakdownGrid}>
         <View style={[styles.smallCard, { backgroundColor: '#ede9fe' }]}>
-          <Text style={styles.smallLabel}>👤 Personal</Text>
-          <Text style={styles.smallAmount}>${totalPersonal.toFixed(2)}</Text>
+          <Text style={styles.smallLabel}>👤 My Personal</Text>
+          <Text style={styles.smallAmount}>${myPersonalTotal.toFixed(2)}</Text>
         </View>
         <View style={[styles.smallCard, { backgroundColor: '#fce7f3' }]}>
           <Text style={styles.smallLabel}>👨‍👩‍👧 Shared</Text>
           <Text style={styles.smallAmount}>${totalShared.toFixed(2)}</Text>
         </View>
+        {otherMembersWithExpenses.map(member => (
+          <View key={member.id} style={[styles.smallCard, { backgroundColor: '#e0f2fe' }]}>
+            <Text style={styles.smallLabel}>👤 {member.full_name || 'Member'}'s Personal</Text>
+            <Text style={styles.smallAmount}>${member.total.toFixed(2)}</Text>
+          </View>
+        ))}
       </View>
 
       {/* Action Buttons */}
@@ -205,8 +241,10 @@ const styles = StyleSheet.create({
   },
   totalLabel: { color: '#c7d2fe', fontSize: 14, marginBottom: 8 },
   totalAmount: { color: '#fff', fontSize: 42, fontWeight: 'bold' },
-  row: { flexDirection: 'row', marginHorizontal: 16, gap: 12 },
-  smallCard: { flex: 1, borderRadius: 16, padding: 16 },
+  breakdownGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: 16, gap: 12
+  },
+  smallCard: { flexGrow: 1, flexBasis: '45%', borderRadius: 16, padding: 16 },
   smallLabel: { fontSize: 12, color: '#666', marginBottom: 4 },
   smallAmount: { fontSize: 22, fontWeight: 'bold', color: '#1a1a2e' },
   actionRow: { flexDirection: 'row', marginHorizontal: 16, gap: 12, marginTop: 16 },
