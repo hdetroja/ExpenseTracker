@@ -118,9 +118,10 @@ export default function Profile() {
     setLoading(true);
     const { data: { user: currentUser } } = await supabase.auth.getUser();
 
+    const { data: { session } } = await supabase.auth.getSession();
     const { data: fam, error } = await supabase
       .from('families')
-      .insert({ name: familyName.trim(), created_by: user.id })
+      .insert({ name: familyName.trim(), created_by: currentUser.id })
       .select()
       .single();
 
@@ -130,7 +131,7 @@ export default function Profile() {
       await supabase
         .from('profiles')
         .update({ family_id: fam.id })
-        .eq('id', user.id);
+        .eq('id', currentUser.id);
       setFamilyName('');
       fetchData();
     }
@@ -144,6 +145,8 @@ export default function Profile() {
     }
     setLoading(true);
 
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+
     const { data: fam, error } = await supabase
       .rpc('find_family_by_invite_code', { code: inviteCode.trim() })
       .single();
@@ -154,7 +157,7 @@ export default function Profile() {
       await supabase
         .from('profiles')
         .update({ family_id: fam.id })
-        .eq('id', user.id);
+        .eq('id', currentUser.id);
       setInviteCode('');
       Alert.alert('Success', `You joined ${fam.name}!`);
       fetchData();

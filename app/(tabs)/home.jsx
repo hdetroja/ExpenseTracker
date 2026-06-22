@@ -12,9 +12,11 @@ export default function Home() {
   const [currentUser, setCurrentUser] = useState(null);
   const [shoppingLists, setShoppingLists] = useState([]);
   const [familyMembers, setFamilyMembers] = useState([]);
+  const [travelTotal, setTravelTotal] = useState(0);
 
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const currentYear = now.getFullYear();
 
   useFocusEffect(
     useCallback(() => {
@@ -49,6 +51,21 @@ export default function Home() {
       .select('*')
       .order('expense_date', { ascending: false });
     if (exp) setExpenses(exp);
+
+    // Fetch this year's travel total
+    const { data: trips } = await supabase
+      .from('trips')
+      .select('id, start_date, travel_expenses(amount)')
+      .gte('start_date', `${currentYear}-01-01`)
+      .lte('start_date', `${currentYear}-12-31`);
+
+    if (trips) {
+      const total = trips.reduce((sum, trip) => {
+        const tripSum = (trip.travel_expenses || []).reduce((s, e) => s + parseFloat(e.amount), 0);
+        return sum + tripSum;
+      }, 0);
+      setTravelTotal(total);
+    }
 
     // Fetch family members + shopping lists
     if (user) {
@@ -85,13 +102,9 @@ export default function Home() {
   }
 
   const monthExpenses = expenses.filter(e => e.expense_date?.startsWith(currentMonth));
-
-  // Grand total = everyone's personal + shared (visible expenses are already filtered by RLS)
   const totalMonth = monthExpenses.reduce((sum, e) => sum + parseFloat(e.amount), 0);
-
   const totalShared = monthExpenses.filter(e => e.is_shared).reduce((sum, e) => sum + parseFloat(e.amount), 0);
 
-  // Per-person personal totals — works for any number of family members
   const personalTotalsByUser = {};
   monthExpenses.filter(e => !e.is_shared).forEach(e => {
     if (!personalTotalsByUser[e.owner_id]) personalTotalsByUser[e.owner_id] = 0;
@@ -100,7 +113,6 @@ export default function Home() {
 
   const myPersonalTotal = personalTotalsByUser[currentUser?.id] || 0;
 
-  // Other family members with personal expenses this month
   const otherMembersWithExpenses = familyMembers
     .filter(m => m.id !== currentUser?.id && personalTotalsByUser[m.id] > 0)
     .map(m => ({ ...m, total: personalTotalsByUser[m.id] }));
@@ -119,12 +131,18 @@ export default function Home() {
         </Text>
       </View>
 
-      {/* Total Card — Grand total of everyone */}
-      <View style={styles.totalCard}>
-        <Text style={styles.totalLabel}>
-          {familyMembers.length > 1 ? "Family Total This Month" : "Total This Month"}
-        </Text>
-        <Text style={styles.totalAmount}>${totalMonth.toFixed(2)}</Text>
+      {/* Total Cards Row — Month + Year Travel */}
+      <View style={styles.totalRow}>
+        <View style={styles.totalCard}>
+          <Text style={styles.totalLabel}>
+            {familyMembers.length > 1 ? "Family This Month" : "This Month"}
+          </Text>
+          <Text style={styles.totalAmount}>${totalMonth.toFixed(2)}</Text>
+        </View>
+        <TouchableOpacity style={styles.travelTotalCard} onPress={() => router.push('/(tabs)/travel')}>
+          <Text style={styles.travelTotalLabel}>✈️ {currentYear} Travel</Text>
+          <Text style={styles.travelTotalAmount}>${travelTotal.toFixed(2)}</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Breakdown cards — dynamic per person */}
@@ -145,13 +163,23 @@ export default function Home() {
         ))}
       </View>
 
-      {/* Action Buttons */}
+      {/* Action Buttons — 3 equal, centered */}
       <View style={styles.actionRow}>
-        <TouchableOpacity style={styles.addButton} onPress={() => router.push('/(tabs)/add')}>
-          <Text style={styles.addButtonText}>➕ Add Expense</Text>
+        <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/(tabs)/add')}>
+          <Text style={styles.actionIcon}>➕</Text>
+          <Text style={styles.actionLabel}>Add Expense</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.shoppingButton} onPress={() => router.push('/(tabs)/shopping')}>
-          <Text style={styles.shoppingButtonText}>🛒 Shopping</Text>
+        <TouchableOpacity style={styles.actionButtonOutline} onPress={() => router.push('/(tabs)/shopping')}>
+          <Text style={styles.actionIcon}>🛒</Text>
+          <Text style={styles.actionLabelDark}>Shopping</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButtonOutline} onPress={() => router.push('/(tabs)/travel')}>
+          <Text style={styles.actionIcon}>✈️</Text>
+          <Text style={styles.actionLabelDark}>Travel</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButtonOutline} onPress={() => router.push('/(tabs)/onetime')}>
+          <Text style={styles.actionIcon}>📅</Text>
+          <Text style={styles.actionLabelDark}>One-Time</Text>
         </TouchableOpacity>
       </View>
 
@@ -235,29 +263,39 @@ const styles = StyleSheet.create({
   header: { padding: 24, paddingTop: TOP_MARGIN },
   title: { fontSize: 22, fontWeight: 'bold', color: '#1a1a2e' },
   month: { fontSize: 14, color: '#666', marginTop: 4 },
+  totalRow: { flexDirection: 'row', marginHorizontal: 16, gap: 12 },
   totalCard: {
-    backgroundColor: '#4f46e5', margin: 16, borderRadius: 20,
-    padding: 24, alignItems: 'center'
+    flex: 1.3, backgroundColor: '#4f46e5', borderRadius: 20,
+    padding: 20, alignItems: 'center', justifyContent: 'center'
   },
-  totalLabel: { color: '#c7d2fe', fontSize: 14, marginBottom: 8 },
-  totalAmount: { color: '#fff', fontSize: 42, fontWeight: 'bold' },
+  totalLabel: { color: '#c7d2fe', fontSize: 13, marginBottom: 6, textAlign: 'center' },
+  totalAmount: { color: '#fff', fontSize: 30, fontWeight: 'bold' },
+  travelTotalCard: {
+    flex: 1, backgroundColor: '#fff', borderRadius: 20,
+    padding: 20, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: '#e0e0e0'
+  },
+  travelTotalLabel: { color: '#666', fontSize: 12, marginBottom: 6, textAlign: 'center' },
+  travelTotalAmount: { color: '#1a1a2e', fontSize: 22, fontWeight: 'bold' },
   breakdownGrid: {
-    flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: 16, gap: 12
+    flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: 16, gap: 12, marginTop: 12
   },
   smallCard: { flexGrow: 1, flexBasis: '45%', borderRadius: 16, padding: 16 },
   smallLabel: { fontSize: 12, color: '#666', marginBottom: 4 },
   smallAmount: { fontSize: 22, fontWeight: 'bold', color: '#1a1a2e' },
-  actionRow: { flexDirection: 'row', marginHorizontal: 16, gap: 12, marginTop: 16 },
-  addButton: {
-    flex: 2, backgroundColor: '#4f46e5', borderRadius: 12,
-    padding: 16, alignItems: 'center'
+  actionRow: { flexDirection: 'row', marginHorizontal: 16, gap: 10, marginTop: 16 },
+  actionButton: {
+    flex: 1, backgroundColor: '#4f46e5', borderRadius: 12,
+    paddingVertical: 14, alignItems: 'center', justifyContent: 'center'
   },
-  addButtonText: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
-  shoppingButton: {
+  actionButtonOutline: {
     flex: 1, backgroundColor: '#fff', borderRadius: 12,
-    padding: 16, alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0'
+    paddingVertical: 14, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: '#e0e0e0'
   },
-  shoppingButtonText: { color: '#1a1a2e', fontSize: 15, fontWeight: 'bold' },
+  actionIcon: { fontSize: 20, marginBottom: 4 },
+  actionLabel: { color: '#fff', fontSize: 12, fontWeight: 'bold', textAlign: 'center' },
+  actionLabelDark: { color: '#1a1a2e', fontSize: 12, fontWeight: 'bold', textAlign: 'center' },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', margin: 16, color: '#1a1a2e' },
   shoppingCard: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',

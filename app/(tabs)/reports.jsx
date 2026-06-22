@@ -16,6 +16,8 @@ export default function Reports() {
   const [selectedType, setSelectedType] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [travelYearTotal, setTravelYearTotal] = useState(0);
+  const [travelTripCount, setTravelTripCount] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -38,6 +40,24 @@ export default function Reports() {
       .order('expense_date', { ascending: false });
 
     if (exp) setExpenses(exp);
+
+    // Fetch this year's travel total
+    const now = new Date();
+    const year = now.getFullYear();
+    const { data: trips } = await supabase
+      .from('trips')
+      .select('id, travel_expenses(amount)')
+      .gte('start_date', `${year}-01-01`)
+      .lte('start_date', `${year}-12-31`);
+
+    if (trips) {
+      const total = trips.reduce((sum, trip) => {
+        const tripSum = (trip.travel_expenses || []).reduce((s, e) => s + parseFloat(e.amount), 0);
+        return sum + tripSum;
+      }, 0);
+      setTravelYearTotal(total);
+      setTravelTripCount(trips.length);
+    }
   }
 
   async function onRefresh() {
@@ -65,6 +85,9 @@ export default function Reports() {
   const total = filteredExpenses.reduce((sum, e) => sum + parseFloat(e.amount), 0);
   const personalTotal = filteredExpenses.filter(e => !e.is_shared).reduce((sum, e) => sum + parseFloat(e.amount), 0);
   const sharedTotal = filteredExpenses.filter(e => e.is_shared).reduce((sum, e) => sum + parseFloat(e.amount), 0);
+
+  // Grand total including travel, only meaningful for yearly view
+  const grandTotalWithTravel = total + (selectedView === 'year' ? travelYearTotal : 0);
 
   const categoryTotals = {};
   filteredExpenses.forEach(e => {
@@ -116,7 +139,6 @@ export default function Reports() {
     selectedType === 'personal' ? 'Personal' :
     selectedType === 'shared' ? 'Shared' : 'All';
 
-  // Get export expenses — always all types for full export
   const exportExpenses = expenses.filter(e => {
     if (selectedView === 'month') return e.expense_date?.startsWith(currentMonth);
     if (selectedView === 'year') return e.expense_date?.startsWith(currentYear);
@@ -241,6 +263,18 @@ export default function Reports() {
             </View>
           </View>
         )}
+
+        {/* Travel addition — only for yearly view */}
+        {selectedView === 'year' && travelYearTotal > 0 && (
+          <View style={styles.travelAddRow}>
+            <Text style={styles.travelAddLabel}>
+              ✈️ + ${travelYearTotal.toFixed(2)} travel ({travelTripCount} trip{travelTripCount !== 1 ? 's' : ''})
+            </Text>
+            <Text style={styles.travelGrandTotal}>
+              Grand total: ${grandTotalWithTravel.toFixed(2)}
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Export & Delete Section */}
@@ -363,6 +397,12 @@ const styles = StyleSheet.create({
   breakdownDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.2)' },
   breakdownLabel: { color: '#c7d2fe', fontSize: 12, marginBottom: 4 },
   breakdownAmount: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  travelAddRow: {
+    marginTop: 12, paddingTop: 12, borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.2)', width: '100%', alignItems: 'center'
+  },
+  travelAddLabel: { color: '#c7d2fe', fontSize: 13, marginBottom: 4 },
+  travelGrandTotal: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   exportCard: {
     backgroundColor: '#fff', marginHorizontal: 16, borderRadius: 20,
     padding: 16, marginBottom: 16

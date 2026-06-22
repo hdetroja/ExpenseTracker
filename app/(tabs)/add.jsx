@@ -6,6 +6,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
 import { TOP_MARGIN } from '../../lib/constants';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function Add() {
   const [amount, setAmount] = useState('');
@@ -13,7 +14,8 @@ export default function Add() {
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [isShared, setIsShared] = useState(false);
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useFocusEffect(
@@ -43,14 +45,20 @@ export default function Add() {
     setLoading(true);
 
     const { data: { user } } = await supabase.auth.getUser();
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('family_id')
+      .eq('id', user.id)
+      .single();
 
     const { error } = await supabase.from('expenses').insert({
       amount: parseFloat(amount),
       description,
       category_id: selectedCategory,
       is_shared: isShared,
-      expense_date: date,
+      expense_date: date.toISOString().split('T')[0],
       owner_id: user.id,
+      family_id: prof?.family_id || null,
     });
 
     if (error) {
@@ -61,7 +69,7 @@ export default function Add() {
       setDescription('');
       setSelectedCategory(null);
       setIsShared(false);
-      setDate(new Date().toISOString().split('T')[0]);
+      setDate(new Date());
       router.push('/(tabs)/home');
     }
     setLoading(false);
@@ -96,12 +104,20 @@ export default function Add() {
 
         {/* Date */}
         <Text style={styles.label}>Date</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="YYYY-MM-DD"
-          value={date}
-          onChangeText={setDate}
-        />
+        <TouchableOpacity style={styles.dateBtn} onPress={() => setShowDatePicker(true)}>
+          <Text style={styles.dateBtnText}>📅 {date.toDateString()}</Text>
+        </TouchableOpacity>
+        {showDatePicker && (
+          <DateTimePicker
+            value={date}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={(event, selectedDate) => {
+              setShowDatePicker(Platform.OS === 'ios');
+              if (selectedDate) setDate(selectedDate);
+            }}
+          />
+        )}
 
         {/* Personal vs Shared */}
         <Text style={styles.label}>Type</Text>
@@ -180,6 +196,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', borderRadius: 12, padding: 16,
     fontSize: 16, borderWidth: 1, borderColor: '#e0e0e0'
   },
+  dateBtn: {
+    backgroundColor: '#fff', borderRadius: 12, padding: 16,
+    borderWidth: 1, borderColor: '#e0e0e0'
+  },
+  dateBtnText: { fontSize: 16, color: '#1a1a2e' },
   categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   categoryBtn: {
     width: '30%', padding: 10, borderRadius: 12, borderWidth: 1,

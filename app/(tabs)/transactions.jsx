@@ -122,6 +122,24 @@ export default function Transactions() {
     ]);
   }
 
+  async function deleteReturn(id) {
+    Alert.alert(
+      'Delete Return',
+      'Are you sure you want to delete this return?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes', style: 'destructive',
+          onPress: async () => {
+            const { error } = await supabase.from('returns').delete().eq('id', id);
+            if (!error) fetchData();
+            else Alert.alert('Error', error.message);
+          }
+        }
+      ]
+    );
+  }
+
   function handleReturn(expense) {
     const cat = categories[expense.category_id];
     const totalReturned = (returns[expense.id] || []).reduce((sum, r) => sum + parseFloat(r.return_amount), 0);
@@ -206,7 +224,8 @@ export default function Transactions() {
       Alert.alert('Error', 'Please enter a valid amount');
       return;
     }
-    const { error } = await supabase
+
+    const { data, error } = await supabase
       .from('expenses')
       .update({
         amount: parseFloat(editAmount),
@@ -215,10 +234,13 @@ export default function Transactions() {
         category_id: editCategory,
         is_shared: editIsShared,
       })
-      .eq('id', editExpense.id);
+      .eq('id', editExpense.id)
+      .select();
 
     if (error) {
       Alert.alert('Error', error.message);
+    } else if (!data || data.length === 0) {
+      Alert.alert('Cannot Edit', 'RLS blocked — check family_id on expense');
     } else {
       setEditModal(false);
       Alert.alert('Success', 'Expense updated!');
@@ -380,6 +402,9 @@ export default function Transactions() {
                       <Text style={styles.returnHistoryIndex}>#{index + 1}</Text>
                       <Text style={styles.returnHistoryDate}>📅 {r.return_date} • {profiles[r.returned_by]?.full_name || 'Unknown'}</Text>
                       <Text style={styles.returnHistoryAmount}>-${parseFloat(r.return_amount).toFixed(2)}</Text>
+                      <TouchableOpacity onPress={() => deleteReturn(r.id)}>
+                        <Text style={{ fontSize: 14 }}>🗑️</Text>
+                      </TouchableOpacity>
                     </View>
                   ))}
                 </View>

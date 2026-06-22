@@ -62,6 +62,8 @@ export default function TabsLayout() {
       <Tabs.Screen name="profile" options={{ href: null }} />
       <Tabs.Screen name="index" options={{ href: null }} />
       <Tabs.Screen name="shopping" options={{ href: null }} />
+      <Tabs.Screen name="travel" options={{ href: null }} />
+      <Tabs.Screen name="onetime" options={{ href: null }} />
     </Tabs>
   );
 }

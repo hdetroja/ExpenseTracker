@@ -52,6 +52,11 @@ export default function Fixed() {
     }
 
     const { data: { user } } = await supabase.auth.getUser();
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('family_id')
+      .eq('id', user.id)
+      .single();
 
     const { error } = await supabase.from('fixed_expenses').insert({
       description: description.trim(),
@@ -61,6 +66,7 @@ export default function Fixed() {
       is_shared: isShared,
       is_active: true,
       owner_id: user.id,
+      family_id: prof?.family_id || null,
     });
 
     if (error) {
@@ -101,13 +107,21 @@ export default function Fixed() {
   }
 
   async function addToExpenses(item) {
-    const cat = categories.find(c => c.id === item.category_id);
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('family_id')
+      .eq('id', user.id)
+      .single();
+
     const { error } = await supabase.from('expenses').insert({
       amount: item.amount,
       description: item.description,
       category_id: item.category_id,
       is_shared: item.is_shared,
       expense_date: new Date().toISOString().split('T')[0],
+      owner_id: user.id,
+      family_id: prof?.family_id || null,
     });
     if (error) {
       Alert.alert('Error', error.message);
