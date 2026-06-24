@@ -17,7 +17,10 @@ export default function Reports() {
   const [refreshing, setRefreshing] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [travelYearTotal, setTravelYearTotal] = useState(0);
+  const [travelAllTimeTotal, setTravelAllTimeTotal] = useState(0);
   const [travelTripCount, setTravelTripCount] = useState(0);
+  const [onetimeYearTotal, setOnetimeYearTotal] = useState(0);
+  const [onetimeAllTimeTotal, setOnetimeAllTimeTotal] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -38,25 +41,49 @@ export default function Reports() {
       .from('expenses')
       .select('*')
       .order('expense_date', { ascending: false });
-
     if (exp) setExpenses(exp);
 
-    // Fetch this year's travel total
     const now = new Date();
     const year = now.getFullYear();
-    const { data: trips } = await supabase
+
+    // Travel — this year
+    const { data: tripsYear } = await supabase
       .from('trips')
       .select('id, travel_expenses(amount)')
       .gte('start_date', `${year}-01-01`)
       .lte('start_date', `${year}-12-31`);
-
-    if (trips) {
-      const total = trips.reduce((sum, trip) => {
-        const tripSum = (trip.travel_expenses || []).reduce((s, e) => s + parseFloat(e.amount), 0);
-        return sum + tripSum;
-      }, 0);
+    if (tripsYear) {
+      const total = tripsYear.reduce((sum, trip) =>
+        sum + (trip.travel_expenses || []).reduce((s, e) => s + parseFloat(e.amount), 0), 0);
       setTravelYearTotal(total);
-      setTravelTripCount(trips.length);
+      setTravelTripCount(tripsYear.length);
+    }
+
+    // Travel — all time
+    const { data: tripsAll } = await supabase
+      .from('trips')
+      .select('id, travel_expenses(amount)');
+    if (tripsAll) {
+      const total = tripsAll.reduce((sum, trip) =>
+        sum + (trip.travel_expenses || []).reduce((s, e) => s + parseFloat(e.amount), 0), 0);
+      setTravelAllTimeTotal(total);
+    }
+
+    // One-time — this year
+    const { data: onetimeYear } = await supabase
+      .from('onetime_expenses')
+      .select('amount')
+      .eq('year', year);
+    if (onetimeYear) {
+      setOnetimeYearTotal(onetimeYear.reduce((sum, e) => sum + parseFloat(e.amount), 0));
+    }
+
+    // One-time — all time
+    const { data: onetimeAll } = await supabase
+      .from('onetime_expenses')
+      .select('amount');
+    if (onetimeAll) {
+      setOnetimeAllTimeTotal(onetimeAll.reduce((sum, e) => sum + parseFloat(e.amount), 0));
     }
   }
 
@@ -86,8 +113,9 @@ export default function Reports() {
   const personalTotal = filteredExpenses.filter(e => !e.is_shared).reduce((sum, e) => sum + parseFloat(e.amount), 0);
   const sharedTotal = filteredExpenses.filter(e => e.is_shared).reduce((sum, e) => sum + parseFloat(e.amount), 0);
 
-  // Grand total including travel, only meaningful for yearly view
-  const grandTotalWithTravel = total + (selectedView === 'year' ? travelYearTotal : 0);
+  const extraTravel = selectedView === 'year' ? travelYearTotal : selectedView === 'all' ? travelAllTimeTotal : 0;
+  const extraOnetime = selectedView === 'year' ? onetimeYearTotal : selectedView === 'all' ? onetimeAllTimeTotal : 0;
+  const grandTotal = total + extraTravel + extraOnetime;
 
   const categoryTotals = {};
   filteredExpenses.forEach(e => {
@@ -128,8 +156,7 @@ export default function Reports() {
 
   const timePeriodLabel =
     selectedView === 'month' ? `${now.toLocaleString('default', { month: 'long' })}_${currentYear}` :
-    selectedView === 'year' ? currentYear :
-    'All_Time';
+    selectedView === 'year' ? currentYear : 'All_Time';
 
   const timePeriodDisplay =
     selectedView === 'month' ? 'This Month' :
@@ -159,7 +186,6 @@ export default function Reports() {
         periodLabel: timePeriodLabel,
       });
     } catch (err) {
-      console.error('Export error:', err);
       Alert.alert('Export failed', err.message);
     }
     setExporting(false);
@@ -170,10 +196,9 @@ export default function Reports() {
       Alert.alert('Info', 'Switch to "This Year" view to delete yearly data.');
       return;
     }
-
     Alert.alert(
       `Delete ${currentYear} Data`,
-      `This will permanently delete ALL ${currentYear} expenses from the app. Make sure you've exported first!\n\nThis cannot be undone.`,
+      `This will permanently delete ALL ${currentYear} expenses. Make sure you've exported first!\n\nThis cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -184,18 +209,15 @@ export default function Reports() {
               .delete()
               .gte('expense_date', `${currentYear}-01-01`)
               .lte('expense_date', `${currentYear}-12-31`);
-
-            if (error) {
-              Alert.alert('Error', error.message);
-            } else {
-              Alert.alert('Done', `All ${currentYear} expenses deleted.`);
-              fetchData();
-            }
+            if (error) Alert.alert('Error', error.message);
+            else { Alert.alert('Done', `All ${currentYear} expenses deleted.`); fetchData(); }
           }
         }
       ]
     );
   }
+
+  const showExtras = (selectedView === 'year' || selectedView === 'all') && (extraTravel > 0 || extraOnetime > 0);
 
   return (
     <ScrollView
@@ -204,7 +226,6 @@ export default function Reports() {
     >
       <Text style={styles.title}>Reports 📊</Text>
 
-      {/* Time Period Filter */}
       <Text style={styles.filterLabel}>Time Period</Text>
       <View style={styles.filterRow}>
         {[
@@ -224,7 +245,6 @@ export default function Reports() {
         ))}
       </View>
 
-      {/* Type Filter */}
       <Text style={styles.filterLabel}>Expense Type</Text>
       <View style={styles.filterRow}>
         {[
@@ -264,24 +284,28 @@ export default function Reports() {
           </View>
         )}
 
-        {/* Travel addition — only for yearly view */}
-        {selectedView === 'year' && travelYearTotal > 0 && (
-          <View style={styles.travelAddRow}>
-            <Text style={styles.travelAddLabel}>
-              ✈️ + ${travelYearTotal.toFixed(2)} travel ({travelTripCount} trip{travelTripCount !== 1 ? 's' : ''})
-            </Text>
-            <Text style={styles.travelGrandTotal}>
-              Grand total: ${grandTotalWithTravel.toFixed(2)}
-            </Text>
+        {/* Travel + One-time additions */}
+        {showExtras && (
+          <View style={styles.extrasRow}>
+            {extraTravel > 0 && (
+              <Text style={styles.extraLine}>✈️ Travel: ${extraTravel.toFixed(2)}</Text>
+            )}
+            {extraOnetime > 0 && (
+              <Text style={styles.extraLine}>📅 One-Time: ${extraOnetime.toFixed(2)}</Text>
+            )}
+            <View style={styles.grandTotalLine}>
+              <Text style={styles.grandTotalLabel}>Grand Total</Text>
+              <Text style={styles.grandTotalAmount}>${grandTotal.toFixed(2)}</Text>
+            </View>
           </View>
         )}
       </View>
 
-      {/* Export & Delete Section */}
+      {/* Export & Delete */}
       <View style={styles.exportCard}>
         <Text style={styles.exportTitle}>Export Data</Text>
         <Text style={styles.exportSub}>
-          Exports ALL expenses (personal + shared) for {timePeriodDisplay} as Excel
+          Exports ALL expenses for {timePeriodDisplay} as Excel
         </Text>
         <TouchableOpacity
           style={[styles.exportBtn, exporting && styles.exportBtnDisabled]}
@@ -292,12 +316,9 @@ export default function Reports() {
             {exporting ? '⏳ Exporting...' : `📥 Export ${timePeriodDisplay} to Excel`}
           </Text>
         </TouchableOpacity>
-
         {selectedView === 'year' && (
           <TouchableOpacity style={styles.deleteYearBtn} onPress={handleDeleteYear}>
-            <Text style={styles.deleteYearBtnText}>
-              🗑️ Delete {currentYear} data after export
-            </Text>
+            <Text style={styles.deleteYearBtnText}>🗑️ Delete {currentYear} data after export</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -322,7 +343,6 @@ export default function Reports() {
               )}
             />
           </View>
-
           <View style={styles.legend}>
             {pieData.map((item, index) => (
               <View key={index} style={styles.legendItem}>
@@ -375,50 +395,31 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: 'bold', color: '#1a1a2e', marginTop: TOP_MARGIN, marginHorizontal: 16, marginBottom: 12 },
   filterLabel: { fontSize: 12, fontWeight: '600', color: '#999', marginHorizontal: 16, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
   filterRow: { flexDirection: 'row', marginHorizontal: 16, gap: 8, marginBottom: 12 },
-  filterBtn: {
-    flex: 1, padding: 8, borderRadius: 10, borderWidth: 1,
-    borderColor: '#e0e0e0', backgroundColor: '#fff', alignItems: 'center'
-  },
+  filterBtn: { flex: 1, padding: 8, borderRadius: 10, borderWidth: 1, borderColor: '#e0e0e0', backgroundColor: '#fff', alignItems: 'center' },
   filterBtnActive: { backgroundColor: '#4f46e5', borderColor: '#4f46e5' },
   filterText: { fontSize: 11, color: '#666', fontWeight: '600' },
   filterTextActive: { color: '#fff' },
-  totalCard: {
-    backgroundColor: '#4f46e5', margin: 16, borderRadius: 20,
-    padding: 24, alignItems: 'center'
-  },
+  totalCard: { backgroundColor: '#4f46e5', margin: 16, borderRadius: 20, padding: 24, alignItems: 'center' },
   totalLabel: { color: '#c7d2fe', fontSize: 13, marginBottom: 8 },
   totalAmount: { color: '#fff', fontSize: 42, fontWeight: 'bold' },
   totalSub: { color: '#c7d2fe', fontSize: 12, marginTop: 4 },
-  breakdownRow: {
-    flexDirection: 'row', marginTop: 16, paddingTop: 16,
-    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)', width: '100%'
-  },
+  breakdownRow: { flexDirection: 'row', marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)', width: '100%' },
   breakdownItem: { flex: 1, alignItems: 'center' },
   breakdownDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.2)' },
   breakdownLabel: { color: '#c7d2fe', fontSize: 12, marginBottom: 4 },
   breakdownAmount: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  travelAddRow: {
-    marginTop: 12, paddingTop: 12, borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.2)', width: '100%', alignItems: 'center'
-  },
-  travelAddLabel: { color: '#c7d2fe', fontSize: 13, marginBottom: 4 },
-  travelGrandTotal: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  exportCard: {
-    backgroundColor: '#fff', marginHorizontal: 16, borderRadius: 20,
-    padding: 16, marginBottom: 16
-  },
+  extrasRow: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)', width: '100%', alignItems: 'center', gap: 4 },
+  extraLine: { color: '#c7d2fe', fontSize: 13 },
+  grandTotalLine: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)' },
+  grandTotalLabel: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
+  grandTotalAmount: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
+  exportCard: { backgroundColor: '#fff', marginHorizontal: 16, borderRadius: 20, padding: 16, marginBottom: 16 },
   exportTitle: { fontSize: 16, fontWeight: 'bold', color: '#1a1a2e', marginBottom: 4 },
   exportSub: { fontSize: 12, color: '#999', marginBottom: 12 },
-  exportBtn: {
-    backgroundColor: '#4f46e5', borderRadius: 12,
-    padding: 14, alignItems: 'center', marginBottom: 10
-  },
+  exportBtn: { backgroundColor: '#4f46e5', borderRadius: 12, padding: 14, alignItems: 'center', marginBottom: 10 },
   exportBtnDisabled: { opacity: 0.6 },
   exportBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
-  deleteYearBtn: {
-    borderWidth: 1, borderColor: '#FF6B6B', borderRadius: 12,
-    padding: 14, alignItems: 'center'
-  },
+  deleteYearBtn: { borderWidth: 1, borderColor: '#FF6B6B', borderRadius: 12, padding: 14, alignItems: 'center' },
   deleteYearBtnText: { color: '#FF6B6B', fontWeight: '600', fontSize: 14 },
   chartCard: { backgroundColor: '#fff', margin: 16, borderRadius: 20, padding: 16 },
   sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#1a1a2e', marginBottom: 16 },

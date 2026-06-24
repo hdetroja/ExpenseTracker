@@ -13,6 +13,7 @@ export default function Home() {
   const [shoppingLists, setShoppingLists] = useState([]);
   const [familyMembers, setFamilyMembers] = useState([]);
   const [travelTotal, setTravelTotal] = useState(0);
+  const [onetimeTotal, setOnetimeTotal] = useState(0);
 
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -67,7 +68,17 @@ export default function Home() {
       setTravelTotal(total);
     }
 
-    // Fetch family members + shopping lists
+    // Fetch this year's one-time total
+    const { data: onetime } = await supabase
+      .from('onetime_expenses')
+      .select('amount')
+      .eq('year', currentYear);
+
+    if (onetime) {
+      const total = onetime.reduce((sum, e) => sum + parseFloat(e.amount), 0);
+      setOnetimeTotal(total);
+    }
+
     if (user) {
       const { data: prof } = await supabase
         .from('profiles')
@@ -112,7 +123,6 @@ export default function Home() {
   });
 
   const myPersonalTotal = personalTotalsByUser[currentUser?.id] || 0;
-
   const otherMembersWithExpenses = familyMembers
     .filter(m => m.id !== currentUser?.id && personalTotalsByUser[m.id] > 0)
     .map(m => ({ ...m, total: personalTotalsByUser[m.id] }));
@@ -131,21 +141,25 @@ export default function Home() {
         </Text>
       </View>
 
-      {/* Total Cards Row — Month + Year Travel */}
+      {/* Total Cards Row — Month + Travel + One-Time */}
       <View style={styles.totalRow}>
         <View style={styles.totalCard}>
           <Text style={styles.totalLabel}>
-            {familyMembers.length > 1 ? "Family This Month" : "This Month"}
+            {familyMembers.length > 1 ? "Family Month" : "This Month"}
           </Text>
           <Text style={styles.totalAmount}>${totalMonth.toFixed(2)}</Text>
         </View>
-        <TouchableOpacity style={styles.travelTotalCard} onPress={() => router.push('/(tabs)/travel')}>
-          <Text style={styles.travelTotalLabel}>✈️ {currentYear} Travel</Text>
-          <Text style={styles.travelTotalAmount}>${travelTotal.toFixed(2)}</Text>
+        <TouchableOpacity style={styles.extraCard} onPress={() => router.push('/(tabs)/travel')}>
+          <Text style={styles.extraLabel}>✈️ Travel</Text>
+          <Text style={styles.extraAmount}>${travelTotal.toFixed(2)}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.extraCard} onPress={() => router.push('/(tabs)/onetime')}>
+          <Text style={styles.extraLabel}>📅 One-Time</Text>
+          <Text style={styles.extraAmount}>${onetimeTotal.toFixed(2)}</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Breakdown cards — dynamic per person */}
+      {/* Breakdown cards */}
       <View style={styles.breakdownGrid}>
         <View style={[styles.smallCard, { backgroundColor: '#ede9fe' }]}>
           <Text style={styles.smallLabel}>👤 My Personal</Text>
@@ -163,7 +177,7 @@ export default function Home() {
         ))}
       </View>
 
-      {/* Action Buttons — 3 equal, centered */}
+      {/* Action Buttons */}
       <View style={styles.actionRow}>
         <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/(tabs)/add')}>
           <Text style={styles.actionIcon}>➕</Text>
@@ -201,9 +215,7 @@ export default function Home() {
                 </Text>
                 <View style={styles.shoppingCardInfo}>
                   <Text style={styles.shoppingCardName}>{list.name}</Text>
-                  <Text style={styles.shoppingCardMeta}>
-                    {checked}/{total} items done
-                  </Text>
+                  <Text style={styles.shoppingCardMeta}>{checked}/{total} items done</Text>
                 </View>
                 {total > 0 && (
                   <View style={styles.shoppingProgress}>
@@ -223,7 +235,6 @@ export default function Home() {
 
       {/* Recent Transactions */}
       <Text style={styles.sectionTitle}>Recent Transactions</Text>
-
       {recentExpenses.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyText}>No expenses yet</Text>
@@ -263,39 +274,39 @@ const styles = StyleSheet.create({
   header: { padding: 24, paddingTop: TOP_MARGIN },
   title: { fontSize: 22, fontWeight: 'bold', color: '#1a1a2e' },
   month: { fontSize: 14, color: '#666', marginTop: 4 },
-  totalRow: { flexDirection: 'row', marginHorizontal: 16, gap: 12 },
+  totalRow: { flexDirection: 'row', marginHorizontal: 16, gap: 8 },
   totalCard: {
-    flex: 1.3, backgroundColor: '#4f46e5', borderRadius: 20,
-    padding: 20, alignItems: 'center', justifyContent: 'center'
+    flex: 1.4, backgroundColor: '#4f46e5', borderRadius: 16,
+    padding: 14, alignItems: 'center', justifyContent: 'center'
   },
-  totalLabel: { color: '#c7d2fe', fontSize: 13, marginBottom: 6, textAlign: 'center' },
-  totalAmount: { color: '#fff', fontSize: 30, fontWeight: 'bold' },
-  travelTotalCard: {
-    flex: 1, backgroundColor: '#fff', borderRadius: 20,
-    padding: 20, alignItems: 'center', justifyContent: 'center',
+  totalLabel: { color: '#c7d2fe', fontSize: 11, marginBottom: 4, textAlign: 'center' },
+  totalAmount: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
+  extraCard: {
+    flex: 1, backgroundColor: '#fff', borderRadius: 16,
+    padding: 14, alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: '#e0e0e0'
   },
-  travelTotalLabel: { color: '#666', fontSize: 12, marginBottom: 6, textAlign: 'center' },
-  travelTotalAmount: { color: '#1a1a2e', fontSize: 22, fontWeight: 'bold' },
+  extraLabel: { color: '#666', fontSize: 11, marginBottom: 4, textAlign: 'center' },
+  extraAmount: { color: '#1a1a2e', fontSize: 16, fontWeight: 'bold' },
   breakdownGrid: {
     flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: 16, gap: 12, marginTop: 12
   },
   smallCard: { flexGrow: 1, flexBasis: '45%', borderRadius: 16, padding: 16 },
   smallLabel: { fontSize: 12, color: '#666', marginBottom: 4 },
   smallAmount: { fontSize: 22, fontWeight: 'bold', color: '#1a1a2e' },
-  actionRow: { flexDirection: 'row', marginHorizontal: 16, gap: 10, marginTop: 16 },
+  actionRow: { flexDirection: 'row', marginHorizontal: 16, gap: 8, marginTop: 16 },
   actionButton: {
     flex: 1, backgroundColor: '#4f46e5', borderRadius: 12,
-    paddingVertical: 14, alignItems: 'center', justifyContent: 'center'
+    paddingVertical: 12, alignItems: 'center', justifyContent: 'center'
   },
   actionButtonOutline: {
     flex: 1, backgroundColor: '#fff', borderRadius: 12,
-    paddingVertical: 14, alignItems: 'center', justifyContent: 'center',
+    paddingVertical: 12, alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: '#e0e0e0'
   },
-  actionIcon: { fontSize: 20, marginBottom: 4 },
-  actionLabel: { color: '#fff', fontSize: 12, fontWeight: 'bold', textAlign: 'center' },
-  actionLabelDark: { color: '#1a1a2e', fontSize: 12, fontWeight: 'bold', textAlign: 'center' },
+  actionIcon: { fontSize: 18, marginBottom: 2 },
+  actionLabel: { color: '#fff', fontSize: 10, fontWeight: 'bold', textAlign: 'center' },
+  actionLabelDark: { color: '#1a1a2e', fontSize: 10, fontWeight: 'bold', textAlign: 'center' },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', margin: 16, color: '#1a1a2e' },
   shoppingCard: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
