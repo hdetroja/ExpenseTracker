@@ -39,7 +39,7 @@ export default function Reports() {
 
     const { data: exp } = await supabase
       .from('expenses')
-      .select('*')
+      .select('*, returns(return_amount)')
       .order('expense_date', { ascending: false });
     if (exp) setExpenses(exp);
 
@@ -49,12 +49,15 @@ export default function Reports() {
     // Travel — this year
     const { data: tripsYear } = await supabase
       .from('trips')
-      .select('id, travel_expenses(amount)')
+      .select('id, travel_expenses(amount, travel_returns(return_amount))')
       .gte('start_date', `${year}-01-01`)
       .lte('start_date', `${year}-12-31`);
     if (tripsYear) {
       const total = tripsYear.reduce((sum, trip) =>
-        sum + (trip.travel_expenses || []).reduce((s, e) => s + parseFloat(e.amount), 0), 0);
+        sum + (trip.travel_expenses || []).reduce((s, e) => {
+        const returned = (e.travel_returns || []).reduce((r, ret) => r + parseFloat(ret.return_amount), 0);
+        return s + parseFloat(e.amount) - returned;
+      }, 0), 0);
       setTravelYearTotal(total);
       setTravelTripCount(tripsYear.length);
     }
@@ -62,28 +65,37 @@ export default function Reports() {
     // Travel — all time
     const { data: tripsAll } = await supabase
       .from('trips')
-      .select('id, travel_expenses(amount)');
+      .select('id, travel_expenses(amount, travel_returns(return_amount))')
     if (tripsAll) {
       const total = tripsAll.reduce((sum, trip) =>
-        sum + (trip.travel_expenses || []).reduce((s, e) => s + parseFloat(e.amount), 0), 0);
+        sum + (trip.travel_expenses || []).reduce((s, e) => {
+        const returned = (e.travel_returns || []).reduce((r, ret) => r + parseFloat(ret.return_amount), 0);
+        return s + parseFloat(e.amount) - returned;
+      }, 0), 0);
       setTravelAllTimeTotal(total);
     }
 
     // One-time — this year
     const { data: onetimeYear } = await supabase
       .from('onetime_expenses')
-      .select('amount')
+      .select('amount, onetime_returns(return_amount)')
       .eq('year', year);
     if (onetimeYear) {
-      setOnetimeYearTotal(onetimeYear.reduce((sum, e) => sum + parseFloat(e.amount), 0));
+      setOnetimeYearTotal(onetimeYear.reduce((sum, e) => {
+        const returned = (e.onetime_returns || []).reduce((r, ret) => r + parseFloat(ret.return_amount), 0);
+        return sum + parseFloat(e.amount) - returned;
+      }, 0));
     }
 
     // One-time — all time
     const { data: onetimeAll } = await supabase
       .from('onetime_expenses')
-      .select('amount');
+      .select('amount, onetime_returns(return_amount)')
     if (onetimeAll) {
-      setOnetimeAllTimeTotal(onetimeAll.reduce((sum, e) => sum + parseFloat(e.amount), 0));
+      setOnetimeAllTimeTotal(onetimeAll.reduce((sum, e) => {
+        const returned = (e.onetime_returns || []).reduce((r, ret) => r + parseFloat(ret.return_amount), 0);
+        return sum + parseFloat(e.amount) - returned;
+      }, 0));
     }
   }
 
@@ -109,9 +121,18 @@ export default function Reports() {
     return timeMatch && typeMatch;
   });
 
-  const total = filteredExpenses.reduce((sum, e) => sum + parseFloat(e.amount), 0);
-  const personalTotal = filteredExpenses.filter(e => !e.is_shared).reduce((sum, e) => sum + parseFloat(e.amount), 0);
-  const sharedTotal = filteredExpenses.filter(e => e.is_shared).reduce((sum, e) => sum + parseFloat(e.amount), 0);
+  const total = filteredExpenses.reduce((sum, e) => {
+    const returned = (e.returns || []).reduce((r, ret) => r + parseFloat(ret.return_amount), 0);
+    return sum + parseFloat(e.amount) - returned;
+  }, 0);
+  const personalTotal = filteredExpenses.filter(e => !e.is_shared).reduce((sum, e) => {
+    const returned = (e.returns || []).reduce((r, ret) => r + parseFloat(ret.return_amount), 0);
+    return sum + parseFloat(e.amount) - returned;
+  }, 0);
+  const sharedTotal = filteredExpenses.filter(e => e.is_shared).reduce((sum, e) => {
+    const returned = (e.returns || []).reduce((r, ret) => r + parseFloat(ret.return_amount), 0);
+    return sum + parseFloat(e.amount) - returned;
+  }, 0);
 
   const extraTravel = selectedView === 'year' ? travelYearTotal : selectedView === 'all' ? travelAllTimeTotal : 0;
   const extraOnetime = selectedView === 'year' ? onetimeYearTotal : selectedView === 'all' ? onetimeAllTimeTotal : 0;
@@ -120,7 +141,8 @@ export default function Reports() {
   const categoryTotals = {};
   filteredExpenses.forEach(e => {
     if (!categoryTotals[e.category_id]) categoryTotals[e.category_id] = 0;
-    categoryTotals[e.category_id] += parseFloat(e.amount);
+    const returned = (e.returns || []).reduce((r, ret) => r + parseFloat(ret.return_amount), 0);
+    categoryTotals[e.category_id] += parseFloat(e.amount) - returned;
   });
 
   const pieData = Object.entries(categoryTotals).map(([catId, amount]) => {
@@ -147,10 +169,13 @@ export default function Reports() {
       .forEach(e => {
         const month = e.expense_date?.slice(0, 7);
         if (!monthlyTotals[month]) monthlyTotals[month] = 0;
-        monthlyTotals[month] += parseFloat(e.amount);
+        const returned = (e.returns || []).reduce((r, ret) => r + parseFloat(ret.return_amount), 0);
+        monthlyTotals[month] += parseFloat(e.amount) - returned;
       });
   }
 
+  console.log('monthlyTotals:', JSON.stringify(monthlyTotals));
+  console.log('first expense:', JSON.stringify(expenses[0]));
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -371,7 +396,7 @@ export default function Reports() {
             .map(([month, amount]) => {
               const monthIndex = parseInt(month.split('-')[1]) - 1;
               const maxVal = Math.max(...Object.values(monthlyTotals));
-              const barWidth = maxVal > 0 ? (amount / maxVal) * (screenWidth - 120) : 0;
+              const barWidth = maxVal > 0 ? (amount / maxVal) * (screenWidth - 200) : 0;
               return (
                 <View key={month} style={styles.barRow}>
                   <Text style={styles.barLabel}>{monthNames[monthIndex]}</Text>

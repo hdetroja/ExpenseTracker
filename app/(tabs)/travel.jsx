@@ -73,7 +73,7 @@ export default function Travel() {
   async function fetchTrips() {
     const { data } = await supabase
       .from('trips')
-      .select('*, travel_expenses(amount)')
+      .select('*, travel_expenses(amount, travel_returns(return_amount))')
       .order('start_date', { ascending: false });
     if (data) setTrips(data);
   }
@@ -189,6 +189,11 @@ export default function Travel() {
     if (!selectedCategory) { Alert.alert('Error', 'Please select a category'); return; }
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('family_id')
+      .eq('id', user.id)
+      .single();
 
     const { error } = await supabase.from('travel_expenses').insert({
       amount: parseFloat(amount),
@@ -199,6 +204,7 @@ export default function Travel() {
       trip_name: selectedTrip.name,
       expense_date: selectedTrip.start_date,
       owner_id: user.id,
+      family_id: prof?.family_id || null,  // fixed
     });
 
     if (error) { Alert.alert('Error', error.message); }
@@ -340,7 +346,10 @@ export default function Travel() {
           </View>
         ) : (
           trips.map(trip => {
-            const total = (trip.travel_expenses || []).reduce((sum, e) => sum + parseFloat(e.amount), 0);
+            const total = (trip.travel_expenses || []).reduce((sum, e) => {
+              const returned = (e.travel_returns || []).reduce((r, ret) => r + parseFloat(ret.return_amount), 0);
+              return sum + parseFloat(e.amount) - returned;
+            }, 0);
             return (
               <TouchableOpacity key={trip.id} style={styles.tripListCard} onPress={() => openTrip(trip)}>
                 <Text style={styles.tripListIcon}>{trip.is_shared ? '👨‍👩‍👧' : '👤'}</Text>

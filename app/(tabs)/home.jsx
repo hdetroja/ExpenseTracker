@@ -49,20 +49,23 @@ export default function Home() {
 
     const { data: exp } = await supabase
       .from('expenses')
-      .select('*')
+      .select('*, returns(return_amount)')
       .order('expense_date', { ascending: false });
     if (exp) setExpenses(exp);
 
     // Fetch this year's travel total
     const { data: trips } = await supabase
       .from('trips')
-      .select('id, start_date, travel_expenses(amount)')
+      .select('id, start_date, travel_expenses(amount, travel_returns(return_amount))')
       .gte('start_date', `${currentYear}-01-01`)
       .lte('start_date', `${currentYear}-12-31`);
 
     if (trips) {
       const total = trips.reduce((sum, trip) => {
-        const tripSum = (trip.travel_expenses || []).reduce((s, e) => s + parseFloat(e.amount), 0);
+        const tripSum = (trip.travel_expenses || []).reduce((s, e) => {
+        const returned = (e.travel_returns || []).reduce((r, ret) => r + parseFloat(ret.return_amount), 0);
+        return s + parseFloat(e.amount) - returned;
+      }, 0);
         return sum + tripSum;
       }, 0);
       setTravelTotal(total);
@@ -71,11 +74,14 @@ export default function Home() {
     // Fetch this year's one-time total
     const { data: onetime } = await supabase
       .from('onetime_expenses')
-      .select('amount')
+      .select('amount, onetime_returns(return_amount)')
       .eq('year', currentYear);
 
     if (onetime) {
-      const total = onetime.reduce((sum, e) => sum + parseFloat(e.amount), 0);
+      const total = onetime.reduce((sum, e) => {
+      const returned = (e.onetime_returns || []).reduce((r, ret) => r + parseFloat(ret.return_amount), 0);
+      return sum + parseFloat(e.amount) - returned;
+    }, 0);
       setOnetimeTotal(total);
     }
 
@@ -113,13 +119,20 @@ export default function Home() {
   }
 
   const monthExpenses = expenses.filter(e => e.expense_date?.startsWith(currentMonth));
-  const totalMonth = monthExpenses.reduce((sum, e) => sum + parseFloat(e.amount), 0);
-  const totalShared = monthExpenses.filter(e => e.is_shared).reduce((sum, e) => sum + parseFloat(e.amount), 0);
+  const totalMonth = monthExpenses.reduce((sum, e) => {
+    const returned = (e.returns || []).reduce((r, ret) => r + parseFloat(ret.return_amount), 0);
+    return sum + parseFloat(e.amount) - returned;
+  }, 0);
+  const totalShared = monthExpenses.filter(e => e.is_shared).reduce((sum, e) => {
+    const returned = (e.returns || []).reduce((r, ret) => r + parseFloat(ret.return_amount), 0);
+    return sum + parseFloat(e.amount) - returned;
+  }, 0);
 
   const personalTotalsByUser = {};
   monthExpenses.filter(e => !e.is_shared).forEach(e => {
     if (!personalTotalsByUser[e.owner_id]) personalTotalsByUser[e.owner_id] = 0;
-    personalTotalsByUser[e.owner_id] += parseFloat(e.amount);
+    const returned = (e.returns || []).reduce((r, ret) => r + parseFloat(ret.return_amount), 0);
+    personalTotalsByUser[e.owner_id] += parseFloat(e.amount) - returned;
   });
 
   const myPersonalTotal = personalTotalsByUser[currentUser?.id] || 0;
