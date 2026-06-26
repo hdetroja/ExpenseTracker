@@ -174,8 +174,6 @@ export default function Reports() {
       });
   }
 
-  console.log('monthlyTotals:', JSON.stringify(monthlyTotals));
-  console.log('first expense:', JSON.stringify(expenses[0]));
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 

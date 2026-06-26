@@ -100,7 +100,6 @@ export default function Transactions() {
 
   function goToNextMonth() {
     const isCurrentMonth = currentMonth === now.getMonth() && currentYear === now.getFullYear();
-    if (isCurrentMonth) return;
     if (currentMonth === 11) {
       setCurrentMonth(0);
       setCurrentYear(y => y + 1);
@@ -284,11 +283,10 @@ export default function Transactions() {
           {monthNames[currentMonth]} {currentYear}
         </Text>
         <TouchableOpacity
-          style={[styles.monthArrow, isCurrentMonth && styles.monthArrowDisabled]}
+          style={styles.monthArrow}
           onPress={goToNextMonth}
-          disabled={isCurrentMonth}
         >
-          <Text style={[styles.monthArrowText, isCurrentMonth && { color: '#ccc' }]}>›</Text>
+          <Text style={styles.monthArrowText}>›</Text>
         </TouchableOpacity>
       </View>
 
