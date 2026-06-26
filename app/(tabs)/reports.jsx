@@ -16,6 +16,8 @@ export default function Reports() {
   const [selectedType, setSelectedType] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportMonth, setExportMonth] = useState(new Date().getMonth());
+  const [exportYear, setExportYear] = useState(new Date().getFullYear());
   const [travelYearTotal, setTravelYearTotal] = useState(0);
   const [travelAllTimeTotal, setTravelAllTimeTotal] = useState(0);
   const [travelTripCount, setTravelTripCount] = useState(0);
@@ -189,11 +191,29 @@ export default function Reports() {
     selectedType === 'personal' ? 'Personal' :
     selectedType === 'shared' ? 'Shared' : 'All';
 
+  const exportMonthStr = `${exportYear}-${String(exportMonth + 1).padStart(2, '0')}`;
   const exportExpenses = expenses.filter(e => {
-    if (selectedView === 'month') return e.expense_date?.startsWith(currentMonth);
+    if (selectedView === 'month') return e.expense_date?.startsWith(exportMonthStr);
     if (selectedView === 'year') return e.expense_date?.startsWith(currentYear);
     return true;
   });
+  const exportMonthTotal = exportExpenses.reduce((sum, e) => {
+    const returned = (e.returns || []).reduce((r, ret) => r + parseFloat(ret.return_amount), 0);
+    return sum + parseFloat(e.amount) - returned;
+  }, 0);
+  const exportPeriodLabel = selectedView === 'month'
+    ? `${monthNames[exportMonth]}_${exportYear}`
+    : timePeriodLabel;
+
+  function goToExportPrevMonth() {
+    if (exportMonth === 0) { setExportMonth(11); setExportYear(y => y - 1); }
+    else setExportMonth(m => m - 1);
+  }
+
+  function goToExportNextMonth() {
+    if (exportMonth === 11) { setExportMonth(0); setExportYear(y => y + 1); }
+    else setExportMonth(m => m + 1);
+  }
 
   async function handleExport() {
     if (exportExpenses.length === 0) {
@@ -206,7 +226,7 @@ export default function Reports() {
         expenses: exportExpenses,
         categories: categoriesList,
         period: selectedView,
-        periodLabel: timePeriodLabel,
+        periodLabel: exportPeriodLabel,
       });
     } catch (err) {
       Alert.alert('Export failed', err.message);
@@ -327,16 +347,35 @@ export default function Reports() {
       {/* Export & Delete */}
       <View style={styles.exportCard}>
         <Text style={styles.exportTitle}>Export Data</Text>
-        <Text style={styles.exportSub}>
-          Exports ALL expenses for {timePeriodDisplay} as Excel
-        </Text>
+        {selectedView === 'month' && (
+          <View style={styles.exportMonthNav}>
+            <TouchableOpacity onPress={goToExportPrevMonth} style={styles.exportMonthArrow}>
+              <Text style={styles.exportMonthArrowText}>‹</Text>
+            </TouchableOpacity>
+            <View style={styles.exportMonthInfo}>
+              <Text style={styles.exportMonthLabel}>
+                {monthNames[exportMonth]} {exportYear}
+              </Text>
+              <Text style={styles.exportMonthTotal}>${exportMonthTotal.toFixed(2)}</Text>
+              <Text style={styles.exportMonthCount}>{exportExpenses.length} transactions</Text>
+            </View>
+            <TouchableOpacity onPress={goToExportNextMonth} style={styles.exportMonthArrow}>
+              <Text style={styles.exportMonthArrowText}>›</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {selectedView !== 'month' && (
+          <Text style={styles.exportSub}>Exports ALL expenses for {timePeriodDisplay} as Excel</Text>
+        )}
         <TouchableOpacity
           style={[styles.exportBtn, exporting && styles.exportBtnDisabled]}
           onPress={handleExport}
           disabled={exporting}
         >
           <Text style={styles.exportBtnText}>
-            {exporting ? '⏳ Exporting...' : `📥 Export ${timePeriodDisplay} to Excel`}
+            {exporting ? '⏳ Exporting...' : selectedView === 'month'
+              ? `📥 Export ${monthNames[exportMonth]} ${exportYear} to Excel`
+              : `📥 Export ${timePeriodDisplay} to Excel`}
           </Text>
         </TouchableOpacity>
         {selectedView === 'year' && (
@@ -459,5 +498,12 @@ const styles = StyleSheet.create({
   barLabel: { width: 30, fontSize: 12, color: '#666' },
   barTrack: { flex: 1, height: 8, backgroundColor: '#f0f4ff', borderRadius: 4 },
   barFill: { height: 8, backgroundColor: '#4f46e5', borderRadius: 4 },
-  barAmount: { width: 55, fontSize: 12, color: '#444', textAlign: 'right' }
+  barAmount: { width: 55, fontSize: 12, color: '#444', textAlign: 'right' },
+  exportMonthNav: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f0f4ff', borderRadius: 12, padding: 12, marginBottom: 12 },
+  exportMonthArrow: { padding: 8 },
+  exportMonthArrowText: { fontSize: 24, color: '#4f46e5', fontWeight: 'bold' },
+  exportMonthInfo: { flex: 1, alignItems: 'center' },
+  exportMonthLabel: { fontSize: 16, fontWeight: 'bold', color: '#1a1a2e' },
+  exportMonthTotal: { fontSize: 22, fontWeight: 'bold', color: '#4f46e5', marginTop: 2 },
+  exportMonthCount: { fontSize: 11, color: '#999', marginTop: 2 }
 });
