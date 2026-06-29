@@ -344,7 +344,7 @@ export default function OneTime() {
                 <Text style={styles.dateBtnText}>📅 {date.toDateString()}</Text>
               </TouchableOpacity>
               {showDatePicker && (
-                <DateTimePicker key={`date-${showDatePicker}`} value={date} mode="date" display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                <DateTimePicker key={`date-${showDatePicker}`} value={date} mode="date" display={Platform.OS === 'ios' ? 'compact' : 'default'}
                   onChange={(e, selected) => { setShowDatePicker(Platform.OS === 'ios'); if (selected) setDate(selected); }} />
               )}
               <Text style={styles.label}>Type</Text>
@@ -393,7 +393,7 @@ export default function OneTime() {
                 <Text style={styles.dateBtnText}>📅 {editDate.toDateString()}</Text>
               </TouchableOpacity>
               {showEditDatePicker && (
-                <DateTimePicker key={`editdate-${showEditDatePicker}`} value={editDate} mode="date" display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                <DateTimePicker key={`editdate-${showEditDatePicker}`} value={editDate} mode="date" display={Platform.OS === 'ios' ? 'compact' : 'default'}
                   onChange={(e, selected) => { setShowEditDatePicker(Platform.OS === 'ios'); if (selected) setEditDate(selected); }} />
               )}
               <Text style={styles.label}>Type</Text>

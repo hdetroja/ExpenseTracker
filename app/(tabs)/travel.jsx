@@ -381,7 +381,7 @@ export default function Travel() {
                 <Text style={styles.dateBtnText}>📅 {startDate.toDateString()}</Text>
               </TouchableOpacity>
               {showStartPicker && (
-                <DateTimePicker key={`start-${showStartPicker}`} value={startDate} mode="date" display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                <DateTimePicker key={`start-${showStartPicker}`} value={startDate} mode="date" display={Platform.OS === 'ios' ? 'compact' : 'default'}
                   onChange={(e, s) => { setShowStartPicker(Platform.OS === 'ios'); if (s) setStartDate(s); }} />
               )}
               <Text style={styles.label}>End Date</Text>
@@ -389,7 +389,7 @@ export default function Travel() {
                 <Text style={styles.dateBtnText}>📅 {endDate.toDateString()}</Text>
               </TouchableOpacity>
               {showEndPicker && (
-                <DateTimePicker key={`end-${showEndPicker}`} value={endDate} mode="date" display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                <DateTimePicker key={`end-${showEndPicker}`} value={endDate} mode="date" display={Platform.OS === 'ios' ? 'compact' : 'default'}
                   onChange={(e, s) => { setShowEndPicker(Platform.OS === 'ios'); if (s) setEndDate(s); }} />
               )}
               <Text style={styles.label}>Type</Text>
@@ -425,7 +425,7 @@ export default function Travel() {
                 <Text style={styles.dateBtnText}>📅 {editStartDate.toDateString()}</Text>
               </TouchableOpacity>
               {showEditStartPicker && (
-                <DateTimePicker key={`editstart-${showEditStartPicker}`} value={editStartDate} mode="date" display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                <DateTimePicker key={`editstart-${showEditStartPicker}`} value={editStartDate} mode="date" display={Platform.OS === 'ios' ? 'compact' : 'default'}
                   onChange={(e, s) => { setShowEditStartPicker(Platform.OS === 'ios'); if (s) setEditStartDate(s); }} />
               )}
               <Text style={styles.label}>End Date</Text>
@@ -433,7 +433,7 @@ export default function Travel() {
                 <Text style={styles.dateBtnText}>📅 {editEndDate.toDateString()}</Text>
               </TouchableOpacity>
               {showEditEndPicker && (
-                <DateTimePicker key={`editend-${showEditEndPicker}`} value={editEndDate} mode="date" display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                <DateTimePicker key={`editend-${showEditEndPicker}`} value={editEndDate} mode="date" display={Platform.OS === 'ios' ? 'compact' : 'default'}
                   onChange={(e, s) => { setShowEditEndPicker(Platform.OS === 'ios'); if (s) setEditEndDate(s); }} />
               )}
               <Text style={styles.label}>Type</Text>
@@ -643,7 +643,7 @@ export default function Travel() {
               <Text style={styles.dateBtnText}>📅 {editStartDate.toDateString()}</Text>
             </TouchableOpacity>
             {showEditStartPicker && (
-              <DateTimePicker key={`editstart-${showEditStartPicker}`} value={editStartDate} mode="date" display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              <DateTimePicker key={`editstart-${showEditStartPicker}`} value={editStartDate} mode="date" display={Platform.OS === 'ios' ? 'compact' : 'default'}
                 onChange={(e, s) => { setShowEditStartPicker(Platform.OS === 'ios'); if (s) setEditStartDate(s); }} />
             )}
             <Text style={styles.label}>End Date</Text>
@@ -651,7 +651,7 @@ export default function Travel() {
               <Text style={styles.dateBtnText}>📅 {editEndDate.toDateString()}</Text>
             </TouchableOpacity>
             {showEditEndPicker && (
-              <DateTimePicker key={`editend-${showEditEndPicker}`} value={editEndDate} mode="date" display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              <DateTimePicker key={`editend-${showEditEndPicker}`} value={editEndDate} mode="date" display={Platform.OS === 'ios' ? 'compact' : 'default'}
                 onChange={(e, s) => { setShowEditEndPicker(Platform.OS === 'ios'); if (s) setEditEndDate(s); }} />
             )}
             <Text style={styles.label}>Type</Text>

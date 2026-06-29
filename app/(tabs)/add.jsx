@@ -112,7 +112,7 @@ export default function Add() {
             key={`date-${showDatePicker}`}
             value={date}
             mode="date"
-            display={Platform.OS === 'ios' ? 'inline' : 'default'}
+            display={Platform.OS === 'ios' ? 'compact' : 'default'}
             onChange={(event, selectedDate) => {
               setShowDatePicker(Platform.OS === 'ios');
               if (selectedDate) setDate(selectedDate);
