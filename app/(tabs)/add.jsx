@@ -109,9 +109,10 @@ export default function Add() {
         </TouchableOpacity>
         {showDatePicker && (
           <DateTimePicker
+            key={`date-${showDatePicker}`}
             value={date}
             mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            display={Platform.OS === 'ios' ? 'inline' : 'default'}
             onChange={(event, selectedDate) => {
               setShowDatePicker(Platform.OS === 'ios');
               if (selectedDate) setDate(selectedDate);
