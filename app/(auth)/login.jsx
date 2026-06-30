@@ -76,7 +76,8 @@ export default function Login() {
             secureTextEntry={!showPassword}
             autoCapitalize="none"
             autoCorrect={false}
-            textContentType="oneTimeCode"
+            textContentType="password"
+            autoComplete="password"
           />
           <TouchableOpacity
             style={styles.eyeBtn}

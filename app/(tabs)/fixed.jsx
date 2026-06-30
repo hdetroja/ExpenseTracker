@@ -17,6 +17,13 @@ export default function Fixed() {
   const [dayOfMonth, setDayOfMonth] = useState('1');
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [isShared, setIsShared] = useState(false);
+  const [editModal, setEditModal] = useState(false);
+  const [editItem, setEditItem] = useState(null);
+  const [editDescription, setEditDescription] = useState('');
+  const [editAmount, setEditAmount] = useState('');
+  const [editDayOfMonth, setEditDayOfMonth] = useState('1');
+  const [editCategory, setEditCategory] = useState(null);
+  const [editIsShared, setEditIsShared] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -104,6 +111,30 @@ export default function Fixed() {
         }
       ]
     );
+  }
+
+  function handleEdit(item) {
+    setEditItem(item);
+    setEditDescription(item.description);
+    setEditAmount(String(item.amount));
+    setEditDayOfMonth(String(item.day_of_month));
+    setEditCategory(item.category_id);
+    setEditIsShared(item.is_shared);
+    setEditModal(true);
+  }
+
+  async function saveEdit() {
+    if (!editDescription.trim()) { Alert.alert('Error', 'Please enter a description'); return; }
+    if (!editAmount || isNaN(parseFloat(editAmount))) { Alert.alert('Error', 'Please enter a valid amount'); return; }
+    const { error } = await supabase.from('fixed_expenses').update({
+      description: editDescription.trim(),
+      amount: parseFloat(editAmount),
+      day_of_month: parseInt(editDayOfMonth) || 1,
+      category_id: editCategory,
+      is_shared: editIsShared,
+    }).eq('id', editItem.id);
+    if (error) Alert.alert('Error', error.message);
+    else { setEditModal(false); fetchData(); }
   }
 
   async function addToExpenses(item) {
@@ -203,6 +234,9 @@ export default function Fixed() {
                   trackColor={{ false: '#ddd', true: '#4f46e5' }}
                 />
 
+                <TouchableOpacity onPress={() => handleEdit(item)}>
+                  <Text style={{ fontSize: 18 }}>✏️</Text>
+                </TouchableOpacity>
                 <TouchableOpacity onPress={() => deleteFixed(item.id, item.description)}>
                   <Text style={{ fontSize: 18 }}>🗑️</Text>
                 </TouchableOpacity>
@@ -287,6 +321,45 @@ export default function Fixed() {
               </TouchableOpacity>
               <TouchableOpacity style={styles.saveBtn} onPress={addFixedExpense}>
                 <Text style={styles.saveBtnText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={editModal} transparent animationType="slide" onRequestClose={() => setEditModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Edit Fixed Expense</Text>
+            <TextInput style={styles.input} placeholder="Description" value={editDescription} onChangeText={setEditDescription} />
+            <TextInput style={styles.input} placeholder="Amount ($)" value={editAmount} onChangeText={setEditAmount} keyboardType="decimal-pad" />
+            <TextInput style={styles.input} placeholder="Due day of month (1-31)" value={editDayOfMonth} onChangeText={setEditDayOfMonth} keyboardType="number-pad" />
+            <Text style={styles.label}>Type</Text>
+            <View style={styles.toggleRow}>
+              <TouchableOpacity style={[styles.toggleBtn, !editIsShared && styles.toggleActive]} onPress={() => setEditIsShared(false)}>
+                <Text style={[styles.toggleText, !editIsShared && styles.toggleTextActive]}>Personal</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.toggleBtn, editIsShared && styles.toggleActive]} onPress={() => setEditIsShared(true)}>
+                <Text style={[styles.toggleText, editIsShared && styles.toggleTextActive]}>Shared</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.label}>Category</Text>
+            <ScrollView style={{ maxHeight: 120 }} nestedScrollEnabled>
+              <View style={styles.catGrid}>
+                {categories.map(cat => (
+                  <TouchableOpacity key={cat.id} style={[styles.catBtn, editCategory === cat.id && { backgroundColor: cat.color }]} onPress={() => setEditCategory(cat.id)}>
+                    <Text style={{ fontSize: 16 }}>{cat.icon}</Text>
+                    <Text style={styles.catBtnText}>{cat.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setEditModal(false)}>
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.saveBtn} onPress={saveEdit}>
+                <Text style={styles.saveBtnText}>Save Changes</Text>
               </TouchableOpacity>
             </View>
           </View>
