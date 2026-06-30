@@ -21,6 +21,7 @@ export default function Settings() {
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
   const [selectedIcon, setSelectedIcon] = useState(ICONS[0]);
   const [categoriesExpanded, setCategoriesExpanded] = useState(false);
+  const [newCatIsShared, setNewCatIsShared] = useState(false);
   const [userId, setUserId] = useState(null);
 
   useFocusEffect(
@@ -54,6 +55,7 @@ export default function Settings() {
       color: selectedColor,
       is_default: false,
       owner_id: user.id,
+      is_shared: newCatIsShared,
     });
     if (error) {
       Alert.alert('Error', error.message);
@@ -62,6 +64,7 @@ export default function Settings() {
       setNewCatName('');
       setSelectedColor(COLORS[0]);
       setSelectedIcon(ICONS[0]);
+      setNewCatIsShared(false);
       fetchCategories();
     }
   }
@@ -150,7 +153,7 @@ export default function Settings() {
                 <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={styles.catName}>{cat.name}</Text>
                   <Text style={styles.catBadge}>
-                    {cat.is_default ? 'Default' : cat.owner_id === userId ? 'Your category' : 'Other'}
+                    {cat.is_default ? 'Default' : cat.owner_id === userId ? (cat.is_shared ? '👨‍👩‍👧 Shared' : '👤 Personal') : '👨‍👩‍👧 Shared'}
                   </Text>
                 </View>
                 {(cat.is_default || cat.owner_id === userId) && (
@@ -189,6 +192,22 @@ export default function Settings() {
               value={newCatName}
               onChangeText={setNewCatName}
             />
+
+            <Text style={styles.label}>Visibility</Text>
+            <View style={styles.toggleRow}>
+              <TouchableOpacity
+                style={[styles.toggleBtn, !newCatIsShared && styles.toggleActive]}
+                onPress={() => setNewCatIsShared(false)}
+              >
+                <Text style={[styles.toggleText, !newCatIsShared && styles.toggleTextActive]}>👤 Personal</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.toggleBtn, newCatIsShared && styles.toggleActive]}
+                onPress={() => setNewCatIsShared(true)}
+              >
+                <Text style={[styles.toggleText, newCatIsShared && styles.toggleTextActive]}>👨‍👩‍👧 Shared</Text>
+              </TouchableOpacity>
+            </View>
 
             <Text style={styles.label}>Pick an Icon</Text>
             <View style={styles.iconGrid}>
@@ -290,5 +309,10 @@ const styles = StyleSheet.create({
   cancelBtn: { flex: 1, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#e0e0e0', alignItems: 'center' },
   cancelBtnText: { color: '#666', fontWeight: '600' },
   saveBtn: { flex: 1, padding: 16, borderRadius: 12, backgroundColor: '#4f46e5', alignItems: 'center' },
-  saveBtnText: { color: '#fff', fontWeight: '600' }
+  saveBtnText: { color: '#fff', fontWeight: '600' },
+  toggleRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  toggleBtn: { flex: 1, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#e0e0e0', backgroundColor: '#fff', alignItems: 'center' },
+  toggleActive: { backgroundColor: '#4f46e5', borderColor: '#4f46e5' },
+  toggleText: { fontSize: 13, fontWeight: '600', color: '#666' },
+  toggleTextActive: { color: '#fff' }
 });
