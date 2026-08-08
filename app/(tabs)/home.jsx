@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } 
 import { supabase } from '../../lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
 import { TOP_MARGIN } from '../../lib/constants';
+import { useCurrency } from '../../lib/CurrencyContext';
 
 export default function Home() {
   const [expenses, setExpenses] = useState([]);
@@ -14,6 +15,7 @@ export default function Home() {
   const [familyMembers, setFamilyMembers] = useState([]);
   const [travelTotal, setTravelTotal] = useState(0);
   const [onetimeTotal, setOnetimeTotal] = useState(0);
+  const { symbol } = useCurrency();
 
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -160,15 +162,15 @@ export default function Home() {
           <Text style={styles.totalLabel}>
             {familyMembers.length > 1 ? "Family Month" : "This Month"}
           </Text>
-          <Text style={styles.totalAmount}>${totalMonth.toFixed(2)}</Text>
+          <Text style={styles.totalAmount}>{symbol}{totalMonth.toFixed(2)}</Text>
         </View>
         <TouchableOpacity style={styles.extraCard} onPress={() => router.push('/(tabs)/travel')}>
           <Text style={styles.extraLabel}>✈️ Travel</Text>
-          <Text style={styles.extraAmount}>${travelTotal.toFixed(2)}</Text>
+          <Text style={styles.extraAmount}>{symbol}{travelTotal.toFixed(2)}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.extraCard} onPress={() => router.push('/(tabs)/onetime')}>
           <Text style={styles.extraLabel}>📅 One-Time</Text>
-          <Text style={styles.extraAmount}>${onetimeTotal.toFixed(2)}</Text>
+          <Text style={styles.extraAmount}>{symbol}{onetimeTotal.toFixed(2)}</Text>
         </TouchableOpacity>
       </View>
 
@@ -176,16 +178,16 @@ export default function Home() {
       <View style={styles.breakdownGrid}>
         <View style={[styles.smallCard, { backgroundColor: '#ede9fe' }]}>
           <Text style={styles.smallLabel}>👤 My Personal</Text>
-          <Text style={styles.smallAmount}>${myPersonalTotal.toFixed(2)}</Text>
+          <Text style={styles.smallAmount}>{symbol}{myPersonalTotal.toFixed(2)}</Text>
         </View>
         <View style={[styles.smallCard, { backgroundColor: '#fce7f3' }]}>
           <Text style={styles.smallLabel}>👨‍👩‍👧 Shared</Text>
-          <Text style={styles.smallAmount}>${totalShared.toFixed(2)}</Text>
+          <Text style={styles.smallAmount}>{symbol}{totalShared.toFixed(2)}</Text>
         </View>
         {otherMembersWithExpenses.map(member => (
           <View key={member.id} style={[styles.smallCard, { backgroundColor: '#e0f2fe' }]}>
             <Text style={styles.smallLabel}>👤 {member.full_name || 'Member'}'s Personal</Text>
-            <Text style={styles.smallAmount}>${member.total.toFixed(2)}</Text>
+            <Text style={styles.smallAmount}>{symbol}{member.total.toFixed(2)}</Text>
           </View>
         ))}
       </View>
@@ -270,7 +272,7 @@ export default function Home() {
                 </Text>
               </View>
               <Text style={styles.expenseAmount}>
-                ${parseFloat(expense.amount).toFixed(2)}
+                {symbol}{parseFloat(expense.amount).toFixed(2)}
               </Text>
             </View>
           );

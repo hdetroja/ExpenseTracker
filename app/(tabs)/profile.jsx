@@ -6,6 +6,8 @@ import {
 import { supabase } from '../../lib/supabase';
 import { useFocusEffect, router } from 'expo-router';
 import { TOP_MARGIN } from '../../lib/constants';
+import { useCurrency } from '../../lib/CurrencyContext';
+import { CURRENCIES } from '../../lib/constants';
 
 export default function Profile() {
   const [user, setUser] = useState(null);
@@ -19,6 +21,8 @@ export default function Profile() {
   const [refreshing, setRefreshing] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [visibleTo, setVisibleTo] = useState([]);
+  const { currency, setCurrency: setGlobalCurrency } = useCurrency();
+  const [selectedCurrency, setSelectedCurrency] = useState(currency);
 
   useFocusEffect(
     useCallback(() => {
@@ -194,6 +198,19 @@ export default function Profile() {
     );
   }
 
+  async function updateCurrency(newCurrency) {
+    if (family) {
+      const { error } = await supabase.from('families').update({ currency: newCurrency }).eq('id', family.id);
+      if (error) { Alert.alert('Error', error.message); return; }
+    } else {
+      const { error } = await supabase.from('profiles').update({ currency: newCurrency }).eq('id', user.id);
+      if (error) { Alert.alert('Error', error.message); return; }
+    }
+    setSelectedCurrency(newCurrency);
+    setGlobalCurrency(newCurrency);
+    Alert.alert('Success', `Currency changed to ${CURRENCIES[newCurrency].name}`);
+  }
+
   return (
     <ScrollView
       style={styles.container}
@@ -267,6 +284,23 @@ export default function Profile() {
                 <Text style={styles.shareBtnText}>📤 Share</Text>
               </TouchableOpacity>
             </View>
+            
+            <View style={styles.currencyBox}>
+            <Text style={styles.membersTitle}>Currency</Text>
+            <View style={styles.toggleRow}>
+              {Object.entries(CURRENCIES).map(([code, { symbol, name }]) => (
+                <TouchableOpacity
+                  key={code}
+                  style={[styles.currencyBtn, selectedCurrency === code && styles.currencyBtnActive]}
+                  onPress={() => updateCurrency(code)}
+                >
+                  <Text style={[styles.currencyBtnText, selectedCurrency === code && styles.currencyBtnTextActive]}>
+                    {symbol} {code}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            </View>
 
             {/* Members */}
             <Text style={styles.membersTitle}>Members</Text>
@@ -303,6 +337,22 @@ export default function Profile() {
           </>
         ) : (
           <>
+            {/* Currency for solo users */}
+            <Text style={styles.sectionTitle}>Currency</Text>
+            <View style={styles.toggleRow}>
+              {Object.entries(CURRENCIES).map(([code, { symbol, name }]) => (
+                <TouchableOpacity
+                  key={code}
+                  style={[styles.currencyBtn, selectedCurrency === code && styles.currencyBtnActive]}
+                  onPress={() => updateCurrency(code)}
+                >
+                  <Text style={[styles.currencyBtnText, selectedCurrency === code && styles.currencyBtnTextActive]}>
+                    {symbol} {code}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            
             {/* Create Family */}
             <Text style={styles.label}>Create a new family/group</Text>
             <View style={styles.editRow}>
@@ -393,4 +443,10 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', marginTop: TOP_MARGIN, marginHorizontal: 16, paddingTop: 10 },
   backBtn: { fontSize: 16, color: '#4f46e5', fontWeight: '600' },
   title: { fontSize: 24, fontWeight: 'bold', color: '#1a1a2e', marginHorizontal: 16, marginBottom: 16 },
+  currencyBox: { marginBottom: 16 },
+  toggleRow: { flexDirection: 'row', gap: 12 },
+  currencyBtn: { flex: 1, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#e0e0e0', backgroundColor: '#fff', alignItems: 'center' },
+  currencyBtnActive: { backgroundColor: '#4f46e5', borderColor: '#4f46e5' },
+  currencyBtnText: { fontSize: 14, fontWeight: '600', color: '#666' },
+  currencyBtnTextActive: { color: '#fff' },
 });

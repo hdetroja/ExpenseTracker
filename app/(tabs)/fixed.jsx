@@ -6,6 +6,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { useFocusEffect } from 'expo-router';
 import { TOP_MARGIN } from '../../lib/constants';
+import { useCurrency } from '../../lib/CurrencyContext';
 
 export default function Fixed() {
   const [fixedExpenses, setFixedExpenses] = useState([]);
@@ -24,6 +25,7 @@ export default function Fixed() {
   const [editDayOfMonth, setEditDayOfMonth] = useState('1');
   const [editCategory, setEditCategory] = useState(null);
   const [editIsShared, setEditIsShared] = useState(false);
+  const { symbol } = useCurrency();
 
   useFocusEffect(
     useCallback(() => {
@@ -178,7 +180,7 @@ export default function Fixed() {
       {/* Monthly Total */}
       <View style={styles.totalCard}>
         <Text style={styles.totalLabel}>Monthly Committed</Text>
-        <Text style={styles.totalAmount}>${totalMonthly.toFixed(2)}</Text>
+        <Text style={styles.totalAmount}>{symbol}{totalMonthly.toFixed(2)}</Text>
         <Text style={styles.totalSub}>
           {fixedExpenses.filter(e => e.is_active).length} active recurring expenses
         </Text>
@@ -215,7 +217,7 @@ export default function Fixed() {
                   </View>
                 </View>
                 <View style={styles.cardRight}>
-                  <Text style={styles.cardAmount}>${parseFloat(item.amount).toFixed(2)}</Text>
+                  <Text style={styles.cardAmount}>{symbol}{parseFloat(item.amount).toFixed(2)}</Text>
                   <Text style={styles.cardFreq}>/ month</Text>
                 </View>
               </View>

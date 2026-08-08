@@ -6,6 +6,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
 import { TOP_MARGIN } from '../../lib/constants';
+import { useCurrency } from '../../lib/CurrencyContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function Add() {
@@ -17,6 +18,7 @@ export default function Add() {
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { symbol } = useCurrency();
 
   useFocusEffect(
     useCallback(() => {
@@ -84,7 +86,7 @@ export default function Add() {
         <Text style={styles.title}>Add Expense</Text>
 
         {/* Amount */}
-        <Text style={styles.label}>Amount ($)</Text>
+        <Text style={styles.label}>Amount ({symbol})</Text>
         <TextInput
           style={styles.input}
           placeholder="0.00"

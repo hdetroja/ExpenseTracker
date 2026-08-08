@@ -6,6 +6,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { useFocusEffect, router } from 'expo-router';
 import { TOP_MARGIN } from '../../lib/constants';
+import { useCurrency } from '../../lib/CurrencyContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function Travel() {
@@ -17,6 +18,7 @@ export default function Travel() {
   const [profiles, setProfiles] = useState({});
   const [refreshing, setRefreshing] = useState(false);
   const [expandedExpense, setExpandedExpense] = useState(null);
+  const { symbol } = useCurrency();
 
   // New trip form
   const [showTripModal, setShowTripModal] = useState(false);
@@ -271,7 +273,7 @@ export default function Travel() {
 
     Alert.alert(
       'Return',
-      `"${item.description || catMap[item.category_id]?.name}"\nRemaining: $${remaining.toFixed(2)}`,
+      `"${item.description || catMap[item.category_id]?.name}"\nRemaining: ${symbol}${remaining.toFixed(2)}`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Partial Return', onPress: () => { setReturnExpense({ ...item, remaining }); setReturnAmount(''); setReturnModal(true); } },
@@ -288,14 +290,14 @@ export default function Travel() {
       return_date: formatDate(new Date()),
       returned_by: user?.id,
     });
-    if (!error) { Alert.alert('Success', `$${amt.toFixed(2)} return recorded!`); fetchTripExpenses(selectedTrip.id); }
+    if (!error) { Alert.alert('Success', `${symbol}${amt.toFixed(2)} return recorded!`); fetchTripExpenses(selectedTrip.id); }
     else Alert.alert('Error', error.message);
   }
 
   async function confirmPartialReturn() {
     const amt = parseFloat(returnAmount);
     if (isNaN(amt) || amt <= 0 || amt > returnExpense.remaining) {
-      Alert.alert('Error', `Max is $${returnExpense.remaining.toFixed(2)}`); return;
+      Alert.alert('Error', `Max is ${symbol}${returnExpense.remaining.toFixed(2)}`); return;
     }
     await confirmReturn(returnExpense.id, amt);
     setReturnModal(false);
@@ -357,7 +359,7 @@ export default function Travel() {
                   <Text style={styles.tripListName}>🧳 {trip.name}</Text>
                   <Text style={styles.tripListDates}>{formatDateRange(trip.start_date, trip.end_date)}</Text>
                 </View>
-                <Text style={styles.tripListTotal}>${total.toFixed(2)}</Text>
+                <Text style={styles.tripListTotal}>{symbol}{total.toFixed(2)}</Text>
                 <TouchableOpacity onPress={() => openEditTrip(trip)}>
                   <Text style={styles.actionBtn}>✏️</Text>
                 </TouchableOpacity>
@@ -484,7 +486,7 @@ export default function Travel() {
 
       <View style={styles.totalCard}>
         <Text style={styles.totalLabel}>Trip Total</Text>
-        <Text style={styles.totalAmount}>${tripTotal.toFixed(2)}</Text>
+        <Text style={styles.totalAmount}>{symbol}{tripTotal.toFixed(2)}</Text>
         <Text style={styles.totalSub}>{expenses.length} expenses</Text>
       </View>
 
@@ -516,13 +518,13 @@ export default function Travel() {
                   </Text>
                   {expReturns.length > 0 && (
                     <TouchableOpacity onPress={() => setExpandedExpense(isExpanded ? null : item.id)}>
-                      <Text style={styles.returnSummary}>↩️ ${totalReturned.toFixed(2)} returned • {isExpanded ? 'hide' : 'show'}</Text>
+                      <Text style={styles.returnSummary}>↩️ {symbol}{totalReturned.toFixed(2)} returned • {isExpanded ? 'hide' : 'show'}</Text>
                     </TouchableOpacity>
                   )}
                 </View>
                 <View style={styles.expenseRight}>
-                  <Text style={[styles.expenseAmount, totalReturned > 0 && { color: '#4f46e5' }]}>${netAmount.toFixed(2)}</Text>
-                  {totalReturned > 0 && <Text style={styles.originalAmount}>${parseFloat(item.amount).toFixed(2)}</Text>}
+                  <Text style={[styles.expenseAmount, totalReturned > 0 && { color: '#4f46e5' }]}>{symbol}{netAmount.toFixed(2)}</Text>
+                  {totalReturned > 0 && <Text style={styles.originalAmount}>{symbol}{parseFloat(item.amount).toFixed(2)}</Text>}
                   <View style={styles.actionIcons}>
                     <TouchableOpacity onPress={() => handleEditExpense(item)}><Text style={styles.actionBtn}>✏️</Text></TouchableOpacity>
                     <TouchableOpacity onPress={() => handleReturn(item)}><Text style={styles.actionBtn}>↩️</Text></TouchableOpacity>
@@ -538,7 +540,7 @@ export default function Travel() {
                     <View key={r.id} style={styles.returnHistoryRow}>
                       <Text style={styles.returnHistoryIdx}>#{idx + 1}</Text>
                       <Text style={styles.returnHistoryDate}>📅 {r.return_date} • {profiles[r.returned_by]?.full_name || 'Unknown'}</Text>
-                      <Text style={styles.returnHistoryAmt}>-${parseFloat(r.return_amount).toFixed(2)}</Text>
+                      <Text style={styles.returnHistoryAmt}>-{symbol}{parseFloat(r.return_amount).toFixed(2)}</Text>
                       <TouchableOpacity onPress={() => deleteReturn(r.id)}><Text style={{ fontSize: 14 }}>🗑️</Text></TouchableOpacity>
                     </View>
                   ))}
@@ -555,7 +557,7 @@ export default function Travel() {
           <ScrollView>
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Add Expense to {selectedTrip?.name}</Text>
-              <Text style={styles.label}>Amount ($)</Text>
+              <Text style={styles.label}>Amount ({symbol})</Text>
               <TextInput style={styles.input} placeholder="0.00" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" autoFocus />
               <Text style={styles.label}>Description</Text>
               <TextInput style={styles.input} placeholder="What was this for?" value={description} onChangeText={setDescription} />
@@ -596,7 +598,7 @@ export default function Travel() {
           <ScrollView>
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Edit Expense</Text>
-              <Text style={styles.label}>Amount ($)</Text>
+              <Text style={styles.label}>Amount ({symbol})</Text>
               <TextInput style={styles.input} value={editAmount} onChangeText={setEditAmount} keyboardType="decimal-pad" />
               <Text style={styles.label}>Description</Text>
               <TextInput style={styles.input} value={editDescription} onChangeText={setEditDescription} />
@@ -680,7 +682,7 @@ export default function Travel() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Partial Return</Text>
-            <Text style={styles.modalSub}>Remaining: ${returnExpense?.remaining.toFixed(2)}</Text>
+            <Text style={styles.modalSub}>Remaining: {symbol}{returnExpense?.remaining.toFixed(2)}</Text>
             <TextInput style={styles.input} placeholder="Enter return amount" keyboardType="decimal-pad" value={returnAmount} onChangeText={setReturnAmount} autoFocus />
             <View style={styles.modalButtons}>
               <TouchableOpacity style={styles.cancelBtn} onPress={() => setReturnModal(false)}>

@@ -6,6 +6,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { useFocusEffect } from 'expo-router';
 import { TOP_MARGIN } from '../../lib/constants';
+import { useCurrency } from '../../lib/CurrencyContext';
 
 export default function Transactions() {
   const [expenses, setExpenses] = useState([]);
@@ -26,6 +27,7 @@ export default function Transactions() {
   const [editCategory, setEditCategory] = useState(null);
   const [editIsShared, setEditIsShared] = useState(false);
   const [profiles, setProfiles] = useState({});
+  const { symbol } = useCurrency();
 
   const now = new Date();
   const [currentYear, setCurrentYear] = useState(now.getFullYear());
@@ -151,7 +153,7 @@ export default function Transactions() {
 
     Alert.alert(
       'Return Item',
-      `"${expense.description || cat?.name}"\nOriginal: $${parseFloat(expense.amount).toFixed(2)}\nAlready returned: $${totalReturned.toFixed(2)}\nRemaining: $${remaining.toFixed(2)}`,
+      `"${expense.description || cat?.name}"\nOriginal: ${symbol}${parseFloat(expense.amount).toFixed(2)}\nAlready returned: ${symbol}${totalReturned.toFixed(2)}\nRemaining: ${symbol}${remaining.toFixed(2)}`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -174,7 +176,7 @@ export default function Transactions() {
   async function confirmPartialReturn() {
     const amount = parseFloat(returnAmount);
     if (isNaN(amount) || amount <= 0 || amount > returnExpense.remaining) {
-      Alert.alert('Error', `Invalid amount. Max remaining is $${returnExpense.remaining.toFixed(2)}`);
+      Alert.alert('Error', `Invalid amount. Max remaining is ${symbol}${returnExpense.remaining.toFixed(2)}`);
       return;
     }
 
@@ -188,7 +190,7 @@ export default function Transactions() {
     
     if (!error) {
       setReturnModal(false);
-      Alert.alert('Success', `$${amount.toFixed(2)} return recorded!`);
+      Alert.alert('Success', `${symbol}${amount.toFixed(2)} return recorded!`);
       fetchData();
     }
   }
@@ -203,7 +205,7 @@ export default function Transactions() {
     });
 
     if (!error) {
-      Alert.alert('Success', `Full return of $${remaining.toFixed(2)} recorded!`);
+      Alert.alert('Success', `Full return of ${symbol}${remaining.toFixed(2)} recorded!`);
       fetchData();
     }
   }
@@ -329,7 +331,7 @@ export default function Transactions() {
         <Text style={styles.totalLabel}>
           {filteredExpenses.length} transaction{filteredExpenses.length !== 1 ? 's' : ''}
         </Text>
-        <Text style={styles.totalAmount}>${total.toFixed(2)}</Text>
+        <Text style={styles.totalAmount}>{symbol}{total.toFixed(2)}</Text>
       </View>
 
       {/* Expense List */}
@@ -366,17 +368,17 @@ export default function Transactions() {
                   {hasReturns && (
                     <TouchableOpacity onPress={() => setExpandedExpense(isExpanded ? null : expense.id)}>
                       <Text style={styles.returnSummary}>
-                        ↩️ ${totalReturned.toFixed(2)} returned • {isExpanded ? 'hide' : 'show details'}
+                        ↩️ {symbol}{totalReturned.toFixed(2)} returned • {isExpanded ? 'hide' : 'show details'}
                       </Text>
                     </TouchableOpacity>
                   )}
                 </View>
                 <View style={styles.expenseRight}>
                   <Text style={[styles.expenseAmount, totalReturned > 0 && styles.amountReduced]}>
-                    ${netAmount.toFixed(2)}
+                    {symbol}{netAmount.toFixed(2)}
                   </Text>
                   {totalReturned > 0 && (
-                    <Text style={styles.originalAmount}>${parseFloat(expense.amount).toFixed(2)}</Text>
+                    <Text style={styles.originalAmount}>{symbol}{parseFloat(expense.amount).toFixed(2)}</Text>
                   )}
                   <View style={styles.actionIcons}>
                     <TouchableOpacity onPress={() => handleEdit(expense)}>
@@ -399,7 +401,7 @@ export default function Transactions() {
                     <View key={r.id} style={styles.returnHistoryRow}>
                       <Text style={styles.returnHistoryIndex}>#{index + 1}</Text>
                       <Text style={styles.returnHistoryDate}>📅 {r.return_date} • {profiles[r.returned_by]?.full_name || 'Unknown'}</Text>
-                      <Text style={styles.returnHistoryAmount}>-${parseFloat(r.return_amount).toFixed(2)}</Text>
+                      <Text style={styles.returnHistoryAmount}>-{symbol}{parseFloat(r.return_amount).toFixed(2)}</Text>
                       <TouchableOpacity onPress={() => deleteReturn(r.id)}>
                         <Text style={{ fontSize: 14 }}>🗑️</Text>
                       </TouchableOpacity>
@@ -507,7 +509,7 @@ export default function Transactions() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Partial Return</Text>
             <Text style={styles.modalSub}>
-              Remaining amount: ${returnExpense?.remaining.toFixed(2)}
+              Remaining amount: {symbol}{returnExpense?.remaining.toFixed(2)}
             </Text>
             <TextInput
               style={styles.modalInput}

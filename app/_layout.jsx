@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { supabase } from '../lib/supabase';
+import { CurrencyProvider } from '../lib/CurrencyContext';
 
 export default function RootLayout() {
   const [session, setSession] = useState(undefined);
@@ -40,5 +41,9 @@ export default function RootLayout() {
     );
   }
 
-  return <Slot />;
+  return (
+    <CurrencyProvider>
+      <Slot />
+    </CurrencyProvider>
+  );
 }

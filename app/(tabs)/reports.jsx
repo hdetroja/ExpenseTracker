@@ -5,6 +5,7 @@ import { useFocusEffect } from 'expo-router';
 import { PieChart } from 'react-native-gifted-charts';
 import { TOP_MARGIN } from '../../lib/constants';
 import { exportToExcel } from '../../lib/exportUtils';
+import { useCurrency } from '../../lib/CurrencyContext';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -23,6 +24,7 @@ export default function Reports() {
   const [travelTripCount, setTravelTripCount] = useState(0);
   const [onetimeYearTotal, setOnetimeYearTotal] = useState(0);
   const [onetimeAllTimeTotal, setOnetimeAllTimeTotal] = useState(0);
+  const { symbol } = useCurrency();
 
   useFocusEffect(
     useCallback(() => {
@@ -310,19 +312,19 @@ export default function Reports() {
       {/* Total Card */}
       <View style={styles.totalCard}>
         <Text style={styles.totalLabel}>{timePeriodDisplay} · {typeLabel}</Text>
-        <Text style={styles.totalAmount}>${total.toFixed(2)}</Text>
+        <Text style={styles.totalAmount}>{symbol}{total.toFixed(2)}</Text>
         <Text style={styles.totalSub}>{filteredExpenses.length} transactions</Text>
 
         {selectedType === 'all' && (
           <View style={styles.breakdownRow}>
             <View style={styles.breakdownItem}>
               <Text style={styles.breakdownLabel}>👤 Personal</Text>
-              <Text style={styles.breakdownAmount}>${personalTotal.toFixed(2)}</Text>
+              <Text style={styles.breakdownAmount}>{symbol}{personalTotal.toFixed(2)}</Text>
             </View>
             <View style={styles.breakdownDivider} />
             <View style={styles.breakdownItem}>
               <Text style={styles.breakdownLabel}>👨‍👩‍👧 Shared</Text>
-              <Text style={styles.breakdownAmount}>${sharedTotal.toFixed(2)}</Text>
+              <Text style={styles.breakdownAmount}>{symbol}{sharedTotal.toFixed(2)}</Text>
             </View>
           </View>
         )}
@@ -331,14 +333,14 @@ export default function Reports() {
         {showExtras && (
           <View style={styles.extrasRow}>
             {extraTravel > 0 && (
-              <Text style={styles.extraLine}>✈️ Travel: ${extraTravel.toFixed(2)}</Text>
+              <Text style={styles.extraLine}>✈️ Travel: {symbol}{extraTravel.toFixed(2)}</Text>
             )}
             {extraOnetime > 0 && (
-              <Text style={styles.extraLine}>📅 One-Time: ${extraOnetime.toFixed(2)}</Text>
+              <Text style={styles.extraLine}>📅 One-Time: {symbol}{extraOnetime.toFixed(2)}</Text>
             )}
             <View style={styles.grandTotalLine}>
               <Text style={styles.grandTotalLabel}>Grand Total</Text>
-              <Text style={styles.grandTotalAmount}>${grandTotal.toFixed(2)}</Text>
+              <Text style={styles.grandTotalAmount}>{symbol}{grandTotal.toFixed(2)}</Text>
             </View>
           </View>
         )}
@@ -356,7 +358,7 @@ export default function Reports() {
               <Text style={styles.exportMonthLabel}>
                 {monthNames[exportMonth]} {exportYear}
               </Text>
-              <Text style={styles.exportMonthTotal}>${exportMonthTotal.toFixed(2)}</Text>
+              <Text style={styles.exportMonthTotal}>{symbol}{exportMonthTotal.toFixed(2)}</Text>
               <Text style={styles.exportMonthCount}>{exportExpenses.length} transactions</Text>
             </View>
             <TouchableOpacity onPress={goToExportNextMonth} style={styles.exportMonthArrow}>
@@ -398,7 +400,7 @@ export default function Reports() {
               centerLabelComponent={() => (
                 <View style={{ alignItems: 'center' }}>
                   <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#1a1a2e' }}>
-                    ${total.toFixed(0)}
+                    {symbol}{total.toFixed(0)}
                   </Text>
                   <Text style={{ fontSize: 10, color: '#666' }}>{typeLabel}</Text>
                 </View>
@@ -410,7 +412,7 @@ export default function Reports() {
               <View key={index} style={styles.legendItem}>
                 <View style={[styles.legendDot, { backgroundColor: item.color }]} />
                 <Text style={styles.legendText}>{item.text} {item.label}</Text>
-                <Text style={styles.legendAmount}>${item.value.toFixed(2)}</Text>
+                <Text style={styles.legendAmount}>{symbol}{item.value.toFixed(2)}</Text>
                 <Text style={styles.legendPercent}>
                   {total > 0 ? ((item.value / total) * 100).toFixed(0) : 0}%
                 </Text>
@@ -440,7 +442,7 @@ export default function Reports() {
                   <View style={styles.barTrack}>
                     <View style={[styles.barFill, { width: barWidth }]} />
                   </View>
-                  <Text style={styles.barAmount}>${amount.toFixed(0)}</Text>
+                  <Text style={styles.barAmount}>{symbol}{amount.toFixed(0)}</Text>
                 </View>
               );
             })}
