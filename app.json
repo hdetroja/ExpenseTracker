@@ -7,11 +7,6 @@
     "scheme": "expensetracker",
     "userInterfaceStyle": "light",
     "icon": "./assets/icon.png",
-    "splash": {
-      "image": "./assets/icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#4f46e5"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.hdetroja.expensetracker",
@@ -32,6 +27,14 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#4f46e5"
+        }
+      ],
       "expo-secure-store",
       [
         "expo-camera",
@@ -45,7 +48,9 @@
           "photosPermission": "Allow ExpenseTracker to access your photos to upload receipts."
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-sharing",
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": true
