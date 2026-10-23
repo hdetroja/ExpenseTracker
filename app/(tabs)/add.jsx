@@ -18,6 +18,9 @@ export default function Add() {
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [familyMembers, setFamilyMembers] = useState([]);
+  const [selectedOwner, setSelectedOwner] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const { symbol } = useCurrency();
 
   useFocusEffect(
@@ -26,12 +29,30 @@ export default function Add() {
     }, [])
   );
 
-  async function fetchCategories() {
+    async function fetchCategories() {
     const { data, error } = await supabase
       .from('categories')
       .select('*')
       .order('name');
     if (data) setCategories(data);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    setCurrentUser(user);
+    setSelectedOwner(user.id);
+
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('family_id')
+      .eq('id', user.id)
+      .single();
+
+    if (prof?.family_id) {
+      const { data: members } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('family_id', prof.family_id);
+      if (members) setFamilyMembers(members);
+    }
   }
 
   async function handleSave() {
@@ -59,7 +80,7 @@ export default function Add() {
       category_id: selectedCategory,
       is_shared: isShared,
       expense_date: date.toISOString().split('T')[0],
-      owner_id: user.id,
+      owner_id: isShared ? user.id : (selectedOwner || user.id),
       family_id: prof?.family_id || null,
     });
 
@@ -72,6 +93,7 @@ export default function Add() {
       setSelectedCategory(null);
       setIsShared(false);
       setDate(new Date());
+      setSelectedOwner(currentUser?.id || null);
       router.push('/(tabs)/home');
     }
     setLoading(false);
@@ -123,25 +145,55 @@ export default function Add() {
         )}
 
         {/* Personal vs Shared */}
-        <Text style={styles.label}>Type</Text>
-        <View style={styles.typeToggle}>
-          <TouchableOpacity
-            style={[styles.toggleBtn, !isShared && styles.toggleActive]}
-            onPress={() => setIsShared(false)}
-          >
-            <Text style={[styles.toggleText, !isShared && styles.toggleTextActive]}>
-              👤 Personal
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.toggleBtn, isShared && styles.toggleActive]}
-            onPress={() => setIsShared(true)}
-          >
-            <Text style={[styles.toggleText, isShared && styles.toggleTextActive]}>
-              👨‍👩‍👧 Shared
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.label}>Add For</Text>
+        {familyMembers.length > 1 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.memberScroll}>
+            {familyMembers.map(member => (
+              <TouchableOpacity
+                key={member.id}
+                style={[
+                  styles.memberChip,
+                  !isShared && selectedOwner === member.id && styles.memberChipActive
+                ]}
+                onPress={() => { setSelectedOwner(member.id); setIsShared(false); }}
+              >
+                <Text style={[
+                  styles.memberChipText,
+                  !isShared && selectedOwner === member.id && styles.memberChipTextActive
+                ]}>
+                  👤 {member.id === currentUser?.id ? 'Me' : member.full_name || 'Member'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={[styles.memberChip, isShared && styles.memberChipActive]}
+              onPress={() => setIsShared(true)}
+            >
+              <Text style={[styles.memberChipText, isShared && styles.memberChipTextActive]}>
+                👨‍👩‍👧 Shared
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
+        ) : (
+          <View style={styles.typeToggle}>
+            <TouchableOpacity
+              style={[styles.toggleBtn, !isShared && styles.toggleActive]}
+              onPress={() => setIsShared(false)}
+            >
+              <Text style={[styles.toggleText, !isShared && styles.toggleTextActive]}>
+                👤 Personal
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.toggleBtn, isShared && styles.toggleActive]}
+              onPress={() => setIsShared(true)}
+            >
+              <Text style={[styles.toggleText, isShared && styles.toggleTextActive]}>
+                👨‍👩‍👧 Shared
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Categories */}
         <Text style={styles.label}>Category</Text>
@@ -217,5 +269,14 @@ const styles = StyleSheet.create({
     alignItems: 'center', marginTop: 24
   },
   saveBtnDisabled: { opacity: 0.6 },
+  memberScroll: { marginBottom: 12 },
+  memberChip: {
+    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20,
+    backgroundColor: '#fff', borderWidth: 1, borderColor: '#e0e0e0',
+    marginRight: 8, alignItems: 'center'
+  },
+  memberChipActive: { backgroundColor: '#4f46e5', borderColor: '#4f46e5' },
+  memberChipText: { fontSize: 13, fontWeight: '600', color: '#666' },
+  memberChipTextActive: { color: '#fff' },
   saveBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' }
 });
