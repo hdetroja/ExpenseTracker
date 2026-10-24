@@ -53,7 +53,8 @@
       "expo-status-bar"
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": true,
+      "baseUrl": "/ExpenseTracker"
     },
     "extra": {
       "router": {},
