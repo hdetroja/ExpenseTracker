@@ -96,6 +96,17 @@ export default function OneTime() {
     setDate(new Date());
   }
 
+  function webDateInput(dateVal, setDateFn) {
+    return (
+      <input
+        type="date"
+        value={`${dateVal.getFullYear()}-${String(dateVal.getMonth()+1).padStart(2,'0')}-${String(dateVal.getDate()).padStart(2,'0')}`}
+        onChange={(e) => { if (e.target.value) setDateFn(new Date(e.target.value + 'T12:00:00')); }}
+        style={{ backgroundColor: '#f0f4ff', borderRadius: 12, padding: 16, fontSize: 15, border: '1px solid #e0e0e0', width: '100%', boxSizing: 'border-box', marginBottom: 12, fontFamily: 'inherit' }}
+      />
+    );
+  }
+
   function formatDate(d) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
@@ -342,12 +353,16 @@ export default function OneTime() {
               <Text style={styles.label}>Amount ({symbol})</Text>
               <TextInput style={styles.input} placeholder="0.00" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
               <Text style={styles.label}>Date</Text>
-              <TouchableOpacity style={styles.dateBtn} onPress={() => setShowDatePicker(true)}>
-                <Text style={styles.dateBtnText}>📅 {date.toDateString()}</Text>
-              </TouchableOpacity>
-              {showDatePicker && (
-                <DateTimePicker key={`date-${showDatePicker}`} value={date} mode="date" display={Platform.OS === 'ios' ? 'compact' : 'default'}
-                  onChange={(e, selected) => { setShowDatePicker(Platform.OS === 'ios'); if (selected) setDate(selected); }} />
+              {Platform.OS === 'web' ? webDateInput(date, setDate) : (
+                <>
+                  <TouchableOpacity style={styles.dateBtn} onPress={() => setShowDatePicker(true)}>
+                    <Text style={styles.dateBtnText}>📅 {date.toDateString()}</Text>
+                  </TouchableOpacity>
+                  {showDatePicker && (
+                    <DateTimePicker key={`date-${showDatePicker}`} value={date} mode="date" display={Platform.OS === 'ios' ? 'compact' : 'default'}
+                      onChange={(e, selected) => { setShowDatePicker(Platform.OS === 'ios'); if (selected) setDate(selected); }} />
+                  )}
+                </>
               )}
               <Text style={styles.label}>Type</Text>
               <View style={styles.toggleRow}>
@@ -391,12 +406,16 @@ export default function OneTime() {
               <Text style={styles.label}>Amount ({symbol})</Text>
               <TextInput style={styles.input} value={editAmount} onChangeText={setEditAmount} keyboardType="decimal-pad" />
               <Text style={styles.label}>Date</Text>
-              <TouchableOpacity style={styles.dateBtn} onPress={() => setShowEditDatePicker(true)}>
-                <Text style={styles.dateBtnText}>📅 {editDate.toDateString()}</Text>
-              </TouchableOpacity>
-              {showEditDatePicker && (
-                <DateTimePicker key={`editdate-${showEditDatePicker}`} value={editDate} mode="date" display={Platform.OS === 'ios' ? 'compact' : 'default'}
-                  onChange={(e, selected) => { setShowEditDatePicker(Platform.OS === 'ios'); if (selected) setEditDate(selected); }} />
+              {Platform.OS === 'web' ? webDateInput(editDate, setEditDate) : (
+                <>
+                  <TouchableOpacity style={styles.dateBtn} onPress={() => setShowEditDatePicker(true)}>
+                    <Text style={styles.dateBtnText}>📅 {editDate.toDateString()}</Text>
+                  </TouchableOpacity>
+                  {showEditDatePicker && (
+                    <DateTimePicker key={`editdate-${showEditDatePicker}`} value={editDate} mode="date" display={Platform.OS === 'ios' ? 'compact' : 'default'}
+                      onChange={(e, selected) => { setShowEditDatePicker(Platform.OS === 'ios'); if (selected) setEditDate(selected); }} />
+                  )}
+                </>
               )}
               <Text style={styles.label}>Type</Text>
               <View style={styles.toggleRow}>

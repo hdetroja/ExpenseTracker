@@ -68,6 +68,17 @@ export default function Travel() {
     }, [])
   );
 
+  function webDateInput(dateVal, setDateFn) {
+    return (
+      <input
+        type="date"
+        value={`${dateVal.getFullYear()}-${String(dateVal.getMonth()+1).padStart(2,'0')}-${String(dateVal.getDate()).padStart(2,'0')}`}
+        onChange={(e) => { if (e.target.value) setDateFn(new Date(e.target.value + 'T12:00:00')); }}
+        style={{ backgroundColor: '#f0f4ff', borderRadius: 12, padding: 16, fontSize: 15, border: '1px solid #e0e0e0', width: '100%', boxSizing: 'border-box', marginBottom: 12, fontFamily: 'inherit' }}
+      />
+    );
+  }
+
   function formatDate(d) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
@@ -379,20 +390,28 @@ export default function Travel() {
               <Text style={styles.label}>Trip Name</Text>
               <TextInput style={styles.input} placeholder="e.g. Hawaii Trip" value={tripName} onChangeText={setTripName} autoFocus />
               <Text style={styles.label}>Start Date</Text>
-              <TouchableOpacity style={styles.dateBtn} onPress={() => setShowStartPicker(true)}>
-                <Text style={styles.dateBtnText}>📅 {startDate.toDateString()}</Text>
-              </TouchableOpacity>
-              {showStartPicker && (
-                <DateTimePicker key={`start-${showStartPicker}`} value={startDate} mode="date" display={Platform.OS === 'ios' ? 'compact' : 'default'}
-                  onChange={(e, s) => { setShowStartPicker(Platform.OS === 'ios'); if (s) setStartDate(s); }} />
+              {Platform.OS === 'web' ? webDateInput(startDate, setStartDate) : (
+                <>
+                  <TouchableOpacity style={styles.dateBtn} onPress={() => setShowStartPicker(true)}>
+                    <Text style={styles.dateBtnText}>📅 {startDate.toDateString()}</Text>
+                  </TouchableOpacity>
+                  {showStartPicker && (
+                    <DateTimePicker key={`start-${showStartPicker}`} value={startDate} mode="date" display={Platform.OS === 'ios' ? 'compact' : 'default'}
+                      onChange={(e, s) => { setShowStartPicker(Platform.OS === 'ios'); if (s) setStartDate(s); }} />
+                  )}
+                </>
               )}
               <Text style={styles.label}>End Date</Text>
-              <TouchableOpacity style={styles.dateBtn} onPress={() => setShowEndPicker(true)}>
-                <Text style={styles.dateBtnText}>📅 {endDate.toDateString()}</Text>
-              </TouchableOpacity>
-              {showEndPicker && (
-                <DateTimePicker key={`end-${showEndPicker}`} value={endDate} mode="date" display={Platform.OS === 'ios' ? 'compact' : 'default'}
-                  onChange={(e, s) => { setShowEndPicker(Platform.OS === 'ios'); if (s) setEndDate(s); }} />
+              {Platform.OS === 'web' ? webDateInput(endDate, setEndDate) : (
+                <>
+                  <TouchableOpacity style={styles.dateBtn} onPress={() => setShowEndPicker(true)}>
+                    <Text style={styles.dateBtnText}>📅 {endDate.toDateString()}</Text>
+                  </TouchableOpacity>
+                  {showEndPicker && (
+                    <DateTimePicker key={`end-${showEndPicker}`} value={endDate} mode="date" display={Platform.OS === 'ios' ? 'compact' : 'default'}
+                      onChange={(e, s) => { setShowEndPicker(Platform.OS === 'ios'); if (s) setEndDate(s); }} />
+                  )}
+                </>
               )}
               <Text style={styles.label}>Type</Text>
               <View style={styles.toggleRow}>
@@ -423,20 +442,28 @@ export default function Travel() {
               <Text style={styles.label}>Trip Name</Text>
               <TextInput style={styles.input} value={editTripName} onChangeText={setEditTripName} />
               <Text style={styles.label}>Start Date</Text>
-              <TouchableOpacity style={styles.dateBtn} onPress={() => setShowEditStartPicker(true)}>
-                <Text style={styles.dateBtnText}>📅 {editStartDate.toDateString()}</Text>
-              </TouchableOpacity>
-              {showEditStartPicker && (
-                <DateTimePicker key={`editstart-${showEditStartPicker}`} value={editStartDate} mode="date" display={Platform.OS === 'ios' ? 'compact' : 'default'}
-                  onChange={(e, s) => { setShowEditStartPicker(Platform.OS === 'ios'); if (s) setEditStartDate(s); }} />
+              {Platform.OS === 'web' ? webDateInput(editStartDate, setEditStartDate) : (
+                <>
+                  <TouchableOpacity style={styles.dateBtn} onPress={() => setShowEditStartPicker(true)}>
+                    <Text style={styles.dateBtnText}>📅 {editStartDate.toDateString()}</Text>
+                  </TouchableOpacity>
+                  {showEditStartPicker && (
+                    <DateTimePicker key={`editstart-${showEditStartPicker}`} value={editStartDate} mode="date" display={Platform.OS === 'ios' ? 'compact' : 'default'}
+                      onChange={(e, s) => { setShowEditStartPicker(Platform.OS === 'ios'); if (s) setEditStartDate(s); }} />
+                  )}
+                </>
               )}
               <Text style={styles.label}>End Date</Text>
-              <TouchableOpacity style={styles.dateBtn} onPress={() => setShowEditEndPicker(true)}>
-                <Text style={styles.dateBtnText}>📅 {editEndDate.toDateString()}</Text>
-              </TouchableOpacity>
-              {showEditEndPicker && (
-                <DateTimePicker key={`editend-${showEditEndPicker}`} value={editEndDate} mode="date" display={Platform.OS === 'ios' ? 'compact' : 'default'}
-                  onChange={(e, s) => { setShowEditEndPicker(Platform.OS === 'ios'); if (s) setEditEndDate(s); }} />
+              {Platform.OS === 'web' ? webDateInput(editEndDate, setEditEndDate) : (
+                <>
+                  <TouchableOpacity style={styles.dateBtn} onPress={() => setShowEditEndPicker(true)}>
+                    <Text style={styles.dateBtnText}>📅 {editEndDate.toDateString()}</Text>
+                  </TouchableOpacity>
+                  {showEditEndPicker && (
+                    <DateTimePicker key={`editend-${showEditEndPicker}`} value={editEndDate} mode="date" display={Platform.OS === 'ios' ? 'compact' : 'default'}
+                      onChange={(e, s) => { setShowEditEndPicker(Platform.OS === 'ios'); if (s) setEditEndDate(s); }} />
+                  )}
+                </>
               )}
               <Text style={styles.label}>Type</Text>
               <View style={styles.toggleRow}>
@@ -641,21 +668,29 @@ export default function Travel() {
             <Text style={styles.label}>Trip Name</Text>
             <TextInput style={styles.input} value={editTripName} onChangeText={setEditTripName} />
             <Text style={styles.label}>Start Date</Text>
-            <TouchableOpacity style={styles.dateBtn} onPress={() => setShowEditStartPicker(true)}>
-              <Text style={styles.dateBtnText}>📅 {editStartDate.toDateString()}</Text>
-            </TouchableOpacity>
-            {showEditStartPicker && (
-              <DateTimePicker key={`editstart-${showEditStartPicker}`} value={editStartDate} mode="date" display={Platform.OS === 'ios' ? 'compact' : 'default'}
-                onChange={(e, s) => { setShowEditStartPicker(Platform.OS === 'ios'); if (s) setEditStartDate(s); }} />
-            )}
+            {Platform.OS === 'web' ? webDateInput(editStartDate, setEditStartDate) : (
+                <>
+                  <TouchableOpacity style={styles.dateBtn} onPress={() => setShowEditStartPicker(true)}>
+                    <Text style={styles.dateBtnText}>📅 {editStartDate.toDateString()}</Text>
+                  </TouchableOpacity>
+                  {showEditStartPicker && (
+                    <DateTimePicker key={`editstart-${showEditStartPicker}`} value={editStartDate} mode="date" display={Platform.OS === 'ios' ? 'compact' : 'default'}
+                      onChange={(e, s) => { setShowEditStartPicker(Platform.OS === 'ios'); if (s) setEditStartDate(s); }} />
+                  )}
+                </>
+              )}
             <Text style={styles.label}>End Date</Text>
-            <TouchableOpacity style={styles.dateBtn} onPress={() => setShowEditEndPicker(true)}>
-              <Text style={styles.dateBtnText}>📅 {editEndDate.toDateString()}</Text>
-            </TouchableOpacity>
-            {showEditEndPicker && (
-              <DateTimePicker key={`editend-${showEditEndPicker}`} value={editEndDate} mode="date" display={Platform.OS === 'ios' ? 'compact' : 'default'}
-                onChange={(e, s) => { setShowEditEndPicker(Platform.OS === 'ios'); if (s) setEditEndDate(s); }} />
-            )}
+            {Platform.OS === 'web' ? webDateInput(editEndDate, setEditEndDate) : (
+                <>
+                  <TouchableOpacity style={styles.dateBtn} onPress={() => setShowEditEndPicker(true)}>
+                    <Text style={styles.dateBtnText}>📅 {editEndDate.toDateString()}</Text>
+                  </TouchableOpacity>
+                  {showEditEndPicker && (
+                    <DateTimePicker key={`editend-${showEditEndPicker}`} value={editEndDate} mode="date" display={Platform.OS === 'ios' ? 'compact' : 'default'}
+                      onChange={(e, s) => { setShowEditEndPicker(Platform.OS === 'ios'); if (s) setEditEndDate(s); }} />
+                  )}
+                </>
+              )}
             <Text style={styles.label}>Type</Text>
             <View style={styles.toggleRow}>
               <TouchableOpacity style={[styles.toggleBtn, !editTripIsShared && styles.toggleActive]} onPress={() => setEditTripIsShared(false)}>

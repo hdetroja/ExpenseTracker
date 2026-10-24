@@ -128,20 +128,31 @@ export default function Add() {
 
         {/* Date */}
         <Text style={styles.label}>Date</Text>
-        <TouchableOpacity style={styles.dateBtn} onPress={() => setShowDatePicker(true)}>
-          <Text style={styles.dateBtnText}>📅 {date.toDateString()}</Text>
-        </TouchableOpacity>
-        {showDatePicker && (
-          <DateTimePicker
-            key={`date-${showDatePicker}`}
-            value={date}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'compact' : 'default'}
-            onChange={(event, selectedDate) => {
-              setShowDatePicker(Platform.OS === 'ios');
-              if (selectedDate) setDate(selectedDate);
-            }}
+        {Platform.OS === 'web' ? (
+          <input
+            type="date"
+            value={`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`}
+            onChange={(e) => { if (e.target.value) setDate(new Date(e.target.value + 'T12:00:00')); }}
+            style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, fontSize: 16, borderWidth: 1, borderColor: '#e0e0e0', width: '100%', boxSizing: 'border-box', border: '1px solid #e0e0e0', fontFamily: 'inherit' }}
           />
+        ) : (
+          <>
+            <TouchableOpacity style={styles.dateBtn} onPress={() => setShowDatePicker(true)}>
+              <Text style={styles.dateBtnText}>📅 {date.toDateString()}</Text>
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                key={`date-${showDatePicker}`}
+                value={date}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'compact' : 'default'}
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(Platform.OS === 'ios');
+                  if (selectedDate) setDate(selectedDate);
+                }}
+              />
+            )}
+          </>
         )}
 
         {/* Personal vs Shared */}
