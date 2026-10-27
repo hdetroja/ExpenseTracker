@@ -29,6 +29,9 @@ jobs:
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          
+      - name: SPA fallback for deep links
+        run: cp dist/index.html dist/404.html
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
