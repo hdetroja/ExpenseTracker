@@ -29,6 +29,12 @@ jobs:
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+
+      - name: Inject PWA tags
+        run: |
+          sed -i 's#</head>#<link rel="manifest" href="/ExpenseTracker/manifest.json"><link rel="apple-touch-icon" href="/ExpenseTracker/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Expenses"><meta name="theme-color" content="#4f46e5"></head>#' dist/index.html
+          grep -q "apple-touch-icon" dist/index.html
+          ls dist
           
       - name: SPA fallback for deep links
         run: cp dist/index.html dist/404.html
